@@ -1,0 +1,29 @@
+[
+  {
+    "code": "AICONF",
+    "sessionId": "AICONF",
+    "name": "AI in .NET - The Living Presentation",
+    "description": "A live demo of Microsoft.Extensions.AI, RAG pipelines, multi-agent workflows, and the Model Context Protocol.",
+    "topicsPath": "data/sessions.json",
+    "slidesPath": "data/slides.md",
+    "isDefault": true
+  },
+  {
+    "code": "DOTNET26",
+    "sessionId": "DOTNET26",
+    "name": ".NET 10 Deep Dive",
+    "description": "Explore C# 14 features, performance improvements, and the new runtime capabilities shipping in .NET 10.",
+    "topicsPath": "data/sessions.json",
+    "slidesPath": "data/dotnet26-slides.md",
+    "isDefault": false
+  },
+  {
+    "code": "CLOUDNATIVE",
+    "sessionId": "CLOUDNATIVE",
+    "name": "Cloud-Native Patterns with .NET",
+    "description": "Containers, service mesh, observability, and resilience patterns for building cloud-native .NET applications.",
+    "topicsPath": "data/sessions.json",
+    "slidesPath": "data/cloudnative-slides.md",
+    "isDefault": false
+  }
+]

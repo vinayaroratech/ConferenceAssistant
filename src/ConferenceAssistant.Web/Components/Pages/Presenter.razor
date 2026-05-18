@@ -1,0 +1,433 @@
+@page "/presenter"
+@rendermode InteractiveServer
+@layout DashboardLayout
+@implements IDisposable
+@inject ISessionService SessionSvc
+@inject IPollService PollSvc
+@inject ConferenceAssistant.Agents.Workflows.PollGenerationWorkflow PollWorkflow
+@inject ConferenceAssistant.Agents.Workflows.SessionSummaryWorkflow SummaryWorkflow
+@inject ConferenceAssistant.Core.Services.IAgentActivityService ActivitySvc
+@inject ConferenceAssistant.Core.Services.ISessionSummaryService SummarySvc
+@inject ConferenceAssistant.Agents.Workflows.QuestionAnswerWorkflow QAWorkflow
+@inject ConferenceAssistant.Agents.Workflows.ResponseAnalysisWorkflow AnalysisWorkflow
+
+<PageTitle>Presenter Dashboard</PageTitle>
+
+<div class="presenter-grid" @onkeydown="OnKeyDown" tabindex="0" @ref="_gridRef">
+    <!-- Topic Panel -->
+    <div class="panel topic-panel">
+        <h3>Current Topic</h3>
+        @if (currentTopic is not null)
+        {
+            <h4>@currentTopic.Title</h4>
+            <p>@currentTopic.Description</p>
+            <ul>
+                @foreach (var point in currentTopic.TalkingPoints)
+                {
+                    <li>@point</li>
+                }
+            </ul>
+        }
+        <div class="timer-row">
+            <span class="timer @(ElapsedWarning ? "timer-warn" : "")">⏱ @ElapsedDisplay</span>
+        </div>
+        <button class="btn" @onclick="AdvanceTopic" disabled="@(!SessionSvc.CanAdvanceTopic())">Next Topic →</button>
+    </div>
+
+    <!-- Slide Panel -->
+    <div class="panel slide-panel">
+        <h3>Slide @(SessionSvc.ActiveSlideIndex + 1) of @SessionSvc.TotalSlides</h3>
+        <div class="slide-scroll-area">
+        @if (SessionSvc.ActiveSlide is not null)
+        {
+            <SlideRenderer Slide="@SessionSvc.ActiveSlide" Compact="true" />
+            @if (!string.IsNullOrEmpty(SessionSvc.ActiveSlide.SpeakerNotes))
+            {
+                <div class="speaker-notes">
+                    <strong>🎤 Speaker Notes:</strong>
+                    <p>@SessionSvc.ActiveSlide.SpeakerNotes</p>
+                </div>
+            }
+        }
+        <div class="slide-nav">
+            <button class="btn" @onclick="PrevSlide" disabled="@(!SessionSvc.CanGoBackSlide())">◀ Previous</button>
+            <button class="btn" @onclick="NextSlide" disabled="@(!SessionSvc.CanAdvanceSlide())">Next ▶</button>
+        </div>
+        @if (SessionSvc.GetNextSlide() is { } nextSlide)
+        {
+            <div class="up-next">
+                <small>Up Next:</small>
+                <SlideRenderer Slide="@nextSlide" Compact="true" />
+            </div>
+        }
+        </div>
+    </div>
+
+    <!-- Poll Panel -->
+    <div class="panel poll-panel">
+        <h3>Poll Control</h3>
+        <button class="btn btn-primary" @onclick="GeneratePoll" disabled="@generating">
+            @(generating ? "Generating…" : "🤖 Generate Poll")
+        </button>
+        @if (currentPoll is not null)
+        {
+            <div class="poll-card">
+                <p><strong>@currentPoll.Question</strong></p>
+                <ul>
+                    @foreach (var opt in currentPoll.Options)
+                    {
+                        <li>@opt</li>
+                    }
+                </ul>
+                <span class="badge @currentPoll.Status.ToString().ToLower()">@currentPoll.Status</span>
+                @if (currentPoll.Status == PollStatus.Draft)
+                {
+                    <button class="btn btn-success" @onclick="LaunchPoll">▶ Launch Poll</button>
+                }
+                @if (currentPoll.Status == PollStatus.Active)
+                {
+                    <button class="btn btn-warning" @onclick="ClosePoll">⏹ Close Poll</button>
+                    <small class="muted">Analysis runs automatically</small>
+                }
+                @if (currentPoll.Status == PollStatus.Closed)
+                {
+                    <button class="btn btn-sm" @onclick="ReopenPoll">🔁 Re-open Poll</button>
+                    @if (!SessionSvc.GetInsightsForPoll(currentPoll.Id).Any())
+                    {
+                        <button class="btn btn-sm btn-warning" @onclick="RetryAnalysis"
+                                disabled="@(analyzingPollId == currentPoll.Id)">
+                            @(analyzingPollId == currentPoll.Id ? "Analyzing…" : "🔁 Retry Analysis")
+                        </button>
+                    }
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Insights Panel -->
+    <div class="panel insights-panel">
+        <h3>AI Insights</h3>
+        @foreach (var insight in SessionSvc.GetInsights().Take(5))
+        {
+            <div class="insight-card @insight.Type.ToString().ToLower()">
+                <span class="badge">@insight.Type</span>
+                <p>@insight.Content</p>
+            </div>
+        }
+    </div>
+
+    <!-- Agent Activity Panel -->
+    <div class="panel activity-panel">
+        <h3>🤖 Agent Activity</h3>
+        @foreach (var entry in ActivitySvc.GetRecent(10))
+        {
+            <div class="activity-entry">
+                <small class="activity-time">@entry.Timestamp.ToString("HH:mm:ss")</small>
+                <span class="activity-agent">[@entry.AgentName]</span>
+                <span class="activity-msg">@entry.Message</span>
+            </div>
+        }
+        @if (!ActivitySvc.GetRecent(1).Any())
+        {
+            <p class="muted">No agent activity yet.</p>
+        }
+    </div>
+
+    <!-- Session Summary Panel -->
+    <div class="panel summary-panel">
+        <h3>📝 Session Summary</h3>
+        <div class="end-session-row">
+            @if (!SessionSvc.IsEnded || !SummarySvc.IsGenerating)
+            {
+                <button class="btn btn-primary" @onclick="GenerateSummary"
+                        disabled="@(summarizing || SummarySvc.IsGenerating)">
+                    @if (summarizing || SummarySvc.IsGenerating)
+                    {
+                        <span>Generating…</span>
+                    }
+                    else if (SessionSvc.IsEnded && string.IsNullOrEmpty(SummarySvc.CurrentSummary))
+                    {
+                        <span>🔁 Retry Summary</span>
+                    }
+                    else
+                    {
+                        <span>🧠 Generate Summary</span>
+                    }
+                </button>
+            }
+            else
+            {
+                <span class="muted">⏳ Auto-generating summary…</span>
+            }
+            @if (!SessionSvc.IsEnded)
+            {
+                <button class="btn btn-danger" @onclick="EndSession">🔴 End Session</button>
+            }
+            else
+            {
+                <span class="ended-badge">🔴 Session Ended</span>
+                <a class="btn btn-ghost btn-sm" href="/analytics">📊 View Analytics</a>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(SummarySvc.CurrentSummary))
+        {
+            <div class="summary-text">@SummarySvc.CurrentSummary</div>
+        }
+    </div>
+
+    <!-- Questions Panel -->
+    <div class="panel questions-panel">
+        <h3>Audience Questions</h3>
+
+        @{
+            var pendingQs = SessionSvc.GetPendingQuestions();
+            var approvedQs = SessionSvc.GetApprovedQuestions();
+        }
+        @if (pendingQs.Any())
+        {
+            <div class="moderation-queue">
+                <div class="mod-label">⚠️ Pending (@pendingQs.Count)</div>
+                @foreach (var q in pendingQs)
+                {
+                    <div class="question-card mod-card">
+                        <p>@q.Text</p>
+                        <div class="mod-actions">
+                            <button class="btn btn-success btn-sm" @onclick="() => ApproveQ(q.Id)">✓ Approve</button>
+                            <button class="btn btn-danger  btn-sm" @onclick="() => RejectQ(q.Id)">✗ Reject</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @foreach (var q in approvedQs.Take(10))
+        {
+            <div class="question-card">
+                <p>@q.Text <strong>(↑@q.Upvotes)</strong></p>
+                @if (q.Answer is not null)
+                {
+                    <small>→ @q.Answer</small>
+                }
+                else
+                {
+                    <button class="btn btn-sm" @onclick="() => AnswerQuestion(q.Id, q.Text)"
+                            disabled="@answeringIds.Contains(q.Id)">
+                        @(answeringIds.Contains(q.Id) ? "Answering…" : "🤖 AI Answer")
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private ConferenceAssistant.Core.Models.SessionTopic? currentTopic;
+    private ConferenceAssistant.Core.Models.Poll? currentPoll;
+    private bool generating = false;
+    private bool summarizing = false;
+    private string? analyzingPollId = null;
+    private System.Threading.Timer? _refreshTimer;
+    private ElementReference _gridRef;
+    private HashSet<string> answeringIds = [];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await _gridRef.FocusAsync();
+    }
+
+    protected override void OnInitialized()
+    {
+        currentTopic = SessionSvc.GetCurrentTopic();
+        RefreshPoll();
+        SessionSvc.TopicChanged += OnTopicChanged;
+        SessionSvc.QuestionsChanged += OnQuestionsChanged;
+        SessionSvc.InsightsChanged += OnInsightsChanged;
+        SessionSvc.SessionEnded += OnSessionEnded;
+        ActivitySvc.Changed += OnActivityChanged;
+        SummarySvc.Changed += OnSummaryChanged;
+
+        // Re-render every 2 s so a poll created on another client (or by the agent) becomes visible
+        _refreshTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged),
+            null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    private void OnTopicChanged(ConferenceAssistant.Core.Models.SessionTopic t)
+    {
+        currentTopic = t;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnQuestionsChanged() => InvokeAsync(StateHasChanged);
+    private void OnInsightsChanged()  => InvokeAsync(StateHasChanged);
+    private void OnSessionEnded()     => InvokeAsync(StateHasChanged);
+    private void OnActivityChanged()  => InvokeAsync(StateHasChanged);
+    private void OnSummaryChanged()   => InvokeAsync(StateHasChanged);
+
+    // --- Timer ---
+    private string ElapsedDisplay
+    {
+        get
+        {
+            if (SessionSvc.SessionStartedAt is null) return "00:00";
+            var e = DateTimeOffset.UtcNow - SessionSvc.SessionStartedAt.Value;
+            return e.TotalHours >= 1
+                ? $"{(int)e.TotalHours}:{e.Minutes:D2}:{e.Seconds:D2}"
+                : $"{e.Minutes:D2}:{e.Seconds:D2}";
+        }
+    }
+    private bool ElapsedWarning
+        => SessionSvc.SessionStartedAt.HasValue &&
+           (DateTimeOffset.UtcNow - SessionSvc.SessionStartedAt.Value).TotalMinutes >= 45;
+
+    // --- Moderation ---
+    private void ApproveQ(string id) { SessionSvc.ApproveQuestion(id); StateHasChanged(); }
+    private void RejectQ(string id)  { SessionSvc.RejectQuestion(id);  StateHasChanged(); }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        _ = e.Key switch
+        {
+            "ArrowRight" or " " => InvokeAsync(NextSlide),
+            "ArrowLeft" => InvokeAsync(PrevSlide),
+            _ => Task.CompletedTask
+        };
+    }
+
+    /// Pick the active poll first; fall back to the most recently created one.
+    private void RefreshPoll()
+    {
+        currentPoll = PollSvc.GetActivePolls().FirstOrDefault()
+                      ?? PollSvc.GetAllPolls().OrderByDescending(p => p.CreatedAt).FirstOrDefault();
+    }
+
+    private async Task GeneratePoll()
+    {
+        generating = true;
+        StateHasChanged();
+        try
+        {
+            var topic = SessionSvc.GetCurrentTopic();
+            var hint = topic?.PollPrompts.FirstOrDefault()?.Hint;
+            await PollWorkflow.GeneratePollAsync(
+                topic?.Id,
+                topic?.Title ?? "General",
+                topic?.Description,
+                topic?.TalkingPoints,
+                hint);
+            RefreshPoll();
+        }
+        finally
+        {
+            generating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void LaunchPoll()
+    {
+        if (currentPoll is not null)
+        {
+            PollSvc.LaunchPoll(currentPoll.Id);
+            RefreshPoll();
+            StateHasChanged();
+        }
+    }
+
+    private void ClosePoll()
+    {
+        if (currentPoll is not null)
+        {
+            PollSvc.ClosePoll(currentPoll.Id);
+            RefreshPoll();
+            StateHasChanged();
+        }
+    }
+
+    private void ReopenPoll()
+    {
+        if (currentPoll is not null)
+        {
+            PollSvc.ReopenPoll(currentPoll.Id);
+            RefreshPoll();
+            StateHasChanged();
+        }
+    }
+
+    private void AdvanceTopic()
+    {
+        currentTopic = SessionSvc.AdvanceToNextTopic();
+        StateHasChanged();
+    }
+
+    private async Task NextSlide()
+    {
+        await SessionSvc.AdvanceSlideAsync();
+        currentTopic = SessionSvc.GetCurrentTopic();
+        StateHasChanged();
+    }
+
+    private async Task PrevSlide()
+    {
+        await SessionSvc.GoBackSlideAsync();
+        currentTopic = SessionSvc.GetCurrentTopic();
+        StateHasChanged();
+    }
+
+    private void EndSession()
+    {
+        SessionSvc.EndSession();
+        // StateHasChanged will be triggered by the OnSessionEnded event subscription
+    }
+
+    private async Task GenerateSummary()
+    {
+        summarizing = true;
+        StateHasChanged();
+        try { await SummaryWorkflow.GenerateSummaryStreamingAsync(); }
+        finally { summarizing = false; StateHasChanged(); }
+    }
+
+    private async Task RetryAnalysis()
+    {
+        if (currentPoll is null || analyzingPollId == currentPoll.Id) return;
+        analyzingPollId = currentPoll.Id;
+        StateHasChanged();
+        try
+        {
+            await AnalysisWorkflow.ExecuteAsync(currentPoll.Id);
+        }
+        finally
+        {
+            analyzingPollId = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AnswerQuestion(string questionId, string questionText)
+    {
+        answeringIds.Add(questionId);
+        StateHasChanged();
+        try
+        {
+            await QAWorkflow.ExecuteAsync(questionId, questionText);
+        }
+        finally
+        {
+            answeringIds.Remove(questionId);
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        SessionSvc.TopicChanged -= OnTopicChanged;
+        SessionSvc.QuestionsChanged -= OnQuestionsChanged;
+        SessionSvc.InsightsChanged -= OnInsightsChanged;
+        SessionSvc.SessionEnded -= OnSessionEnded;
+        ActivitySvc.Changed -= OnActivityChanged;
+        SummarySvc.Changed -= OnSummaryChanged;
+        _refreshTimer?.Dispose();
+    }
+}

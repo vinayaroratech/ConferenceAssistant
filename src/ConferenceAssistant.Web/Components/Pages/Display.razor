@@ -1,0 +1,179 @@
+@page "/display"
+@rendermode InteractiveServer
+@implements IDisposable
+@layout PresentationLayout
+@inject ISessionService SessionSvc
+@inject IPollService PollSvc
+@inject ConferenceAssistant.Core.Services.ISessionSummaryService SummarySvc
+@inject NavigationManager Nav
+@inject IConfiguration Config
+
+<PageTitle>Conference Assistant - Display</PageTitle>
+
+<div class="display-grid">
+    <div class="main-content">
+        @{
+            var activePolls = PollSvc.GetActivePolls();
+            var activePoll = activePolls.FirstOrDefault();
+        }
+
+        @if (activePoll is not null)
+        {
+            <!-- Poll is live - show results chart -->
+            <div class="poll-live">
+                <h2>📊 @activePoll.Question</h2>
+                @{
+                    var tally = PollSvc.GetResultTally(activePoll.Id);
+                    var total = tally.Values.Sum();
+                }
+                <div class="poll-bars">
+                    @foreach (var (option, count) in tally)
+                    {
+                        var pct = total > 0 ? count * 100 / total : 0;
+                        <div class="bar-row">
+                            <span class="bar-label">@option</span>
+                            <div class="bar-track">
+                                <div class="bar-fill" style="width: @pct%"></div>
+                            </div>
+                            <span class="bar-count">@count (@pct%)</span>
+                        </div>
+                    }
+                </div>
+                <p class="vote-count">Total votes: @total</p>
+            </div>
+        }
+        else if (SummarySvc.IsGenerating || !string.IsNullOrEmpty(SummarySvc.CurrentSummary))
+        {
+            <!-- Streaming session summary -->
+            <div class="session-summary">
+                <h2>📝 Session Summary</h2>
+                @if (SummarySvc.IsGenerating)
+                {
+                    <span class="streaming-cursor">▌</span>
+                }
+                <div class="summary-body">@SummarySvc.CurrentSummary</div>
+            </div>
+        }
+        else if (SessionSvc.ActiveSlide is not null)
+        {
+            <!-- Show current slide -->
+            <SlideRenderer Slide="@SessionSvc.ActiveSlide" Compact="false" />
+        }
+        else
+        {
+            <!-- Idle state -->
+            <div class="idle-screen">
+                <h1>🎙️ Conference Assistant</h1>
+                <p>Session: <strong>@SessionSvc.SessionCode</strong></p>
+                <p>Scan to join the session on your phone</p>
+                @{
+                    var joinUrl = GetJoinUrl();
+                    var qrSvg = QrCodeHelper.GenerateSvg(joinUrl);
+                }
+                <div class="qr-code">@((MarkupString)qrSvg)</div>
+                <p class="qr-url">@joinUrl</p>
+            </div>
+        }
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <!-- Persistent QR code - visible at all times so late arrivals can always scan -->
+        @{
+            var sidebarJoinUrl = GetJoinUrl();
+            var sidebarQrSvg = QrCodeHelper.GenerateSvg(sidebarJoinUrl);
+        }
+        <div class="sidebar-qr">
+            <div class="qr-code qr-code-sm">@((MarkupString)sidebarQrSvg)</div>
+            <p class="qr-url">@sidebarJoinUrl</p>
+        </div>
+
+        <!-- Progress dots -->
+        @if (SessionSvc.TotalSlides > 0)
+        {
+            <div class="slide-dots">
+                @for (int i = 0; i < SessionSvc.TotalSlides; i++)
+                {
+                    var dotIndex = i;
+                    <span class="dot @(dotIndex == SessionSvc.ActiveSlideIndex ? "active" : "")"></span>
+                }
+            </div>
+        }
+
+        <!-- Latest insights -->
+        @foreach (var insight in SessionSvc.GetInsights().Take(3))
+        {
+            <div class="insight-chip">
+                <small>💡 @insight.Type</small>
+                <p>@insight.Content[..Math.Min(120, insight.Content.Length)]…</p>
+            </div>
+        }
+
+        <!-- Top questions -->
+        @foreach (var q in SessionSvc.GetQuestions().Take(3))
+        {
+            <div class="question-chip">
+                <p>❓ @q.Text</p>
+                <small>↑@q.Upvotes</small>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private System.Threading.Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        // Immediately re-render when the presenter advances a slide
+        SessionSvc.SlideChanged += OnSlideChanged;
+        SummarySvc.Changed += OnSummaryChanged;
+
+        // Poll every 2 seconds so live vote counts and poll status changes propagate automatically
+        _refreshTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged),
+            null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    private void OnSlideChanged(ConferenceAssistant.Core.Models.Slide _) =>
+        InvokeAsync(StateHasChanged);
+
+    private void OnSummaryChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// Returns the full audience join URL using:
+    /// 1. Session:PublicBaseUrl from config (explicit override - use when laptop IP changes)
+    /// 2. Auto-detected LAN IP + port from NavigationManager (works without config)
+    /// Phones on the same WiFi can reach this URL; localhost cannot be scanned.
+    /// </summary>
+    private string GetJoinUrl()
+    {
+        var publicBase = Config["Session:PublicBaseUrl"]?.TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(publicBase))
+            return $"{publicBase}/session/{SessionSvc.SessionCode}";
+
+        // Auto-detect: replace localhost/127.0.0.1 with first LAN IPv4 address
+        var uri = new Uri(Nav.BaseUri);
+        var host = uri.Host is "localhost" or "127.0.0.1"
+            ? GetLanIp()
+            : uri.Host;
+        var port = uri.IsDefaultPort ? "" : $":{uri.Port}";
+        return $"{uri.Scheme}://{host}{port}/session/{SessionSvc.SessionCode}";
+    }
+
+    private static string GetLanIp()
+    {
+        var entry = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+        var ip = entry.AddressList.FirstOrDefault(a =>
+            a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork &&
+            !System.Net.IPAddress.IsLoopback(a));
+        return ip?.ToString() ?? "localhost";
+    }
+
+    public void Dispose()
+    {
+        SessionSvc.SlideChanged -= OnSlideChanged;
+        SummarySvc.Changed -= OnSummaryChanged;
+        _refreshTimer?.Dispose();
+    }
+}

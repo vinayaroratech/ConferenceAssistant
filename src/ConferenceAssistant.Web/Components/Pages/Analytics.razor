@@ -1,0 +1,196 @@
+@page "/analytics"
+@rendermode InteractiveServer
+@layout DashboardLayout
+@inject ISessionService SessionSvc
+@inject IPollService PollSvc
+@inject IJSRuntime JS
+
+<PageTitle>Session Analytics - Conference Assistant</PageTitle>
+
+<div class="analytics-view">
+    <div class="analytics-hero">
+        <h1 class="gradient-text">Session Analytics</h1>
+        <p>@SessionSvc.SessionName - @SessionSvc.SessionCode</p>
+        <div style="display:flex;gap:.5rem;justify-content:center;margin-top:.75rem;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" @onclick="ExportCsv">⬇️ Export CSV</button>
+            <button class="btn btn-ghost btn-sm" @onclick="CopyUnanswered" disabled="@(!HasUnanswered)">&#x1F4CB; Copy Unanswered Questions</button>
+            @if (copied) { <span style="color:var(--success)">&#x2705; Copied!</span> }
+        </div>
+    </div>
+
+    <!-- KPI row -->
+    <div class="kpi-row">
+        <div class="kpi-card">
+            <div class="kpi-value">@SessionSvc.GetAllTopics().Count(t => t.Status == TopicStatus.Completed)</div>
+            <div class="kpi-label">Topics Covered</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">@SessionSvc.TotalSlides</div>
+            <div class="kpi-label">Total Slides</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">@SessionSvc.GetApprovedQuestions().Count</div>
+            <div class="kpi-label">Questions Asked</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">@PollSvc.GetAllPolls().Count</div>
+            <div class="kpi-label">Polls Run</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">@TotalVotes</div>
+            <div class="kpi-label">Total Votes</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">@SessionSvc.GetInsights().Count</div>
+            <div class="kpi-label">AI Insights</div>
+        </div>
+    </div>
+
+    <div class="analytics-grid">
+        <!-- Top questions by upvotes -->
+        <div class="panel analytics-panel">
+            <h3>Top Questions by Upvotes</h3>
+            @{
+                var topQs = SessionSvc.GetApprovedQuestions().Take(10).ToList();
+                var maxVotes = topQs.Any() ? topQs.Max(q => q.Upvotes) : 1;
+            }
+            @if (!topQs.Any())
+            {
+                <p class="muted">No approved questions yet.</p>
+            }
+            @foreach (var q in topQs)
+            {
+                var pct = maxVotes > 0 ? q.Upvotes * 100 / maxVotes : 0;
+                <div class="analytics-q-row">
+                    <div class="analytics-q-text">@q.Text</div>
+                    <div class="analytics-q-bar">
+                        <div class="bar-track" style="height:14px">
+                            <div class="bar-fill" style="width:@pct%"></div>
+                        </div>
+                        <span class="bar-count">↑@q.Upvotes</span>
+                    </div>
+                    @if (q.Answer is not null)
+                    {
+                        <small class="analytics-q-answer">✅ Answered</small>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Poll results -->
+        <div class="panel analytics-panel">
+            <h3>Poll Results</h3>
+            @foreach (var poll in PollSvc.GetAllPolls())
+            {
+                var tally = PollSvc.GetResultTally(poll.Id);
+                var total = tally.Values.Sum();
+                <div class="analytics-poll">
+                    <div class="analytics-poll-q">@poll.Question <span class="badge @poll.Status.ToString().ToLower()">@poll.Status</span></div>
+                    @if (total > 0)
+                    {
+                        <div class="poll-bars" style="margin-top:.5rem">
+                            @foreach (var (opt, cnt) in tally)
+                            {
+                                var pct = cnt * 100 / total;
+                                <div class="bar-row" style="grid-template-columns:120px 1fr 60px">
+                                    <span class="bar-label" style="font-size:.75rem">@opt</span>
+                                    <div class="bar-track" style="height:18px"><div class="bar-fill" style="width:@pct%"></div></div>
+                                    <span class="bar-count">@cnt</span>
+                                </div>
+                            }
+                        </div>
+                        <small style="color:var(--text-3)">@total total votes</small>
+                    }
+                    else
+                    {
+                        <p class="muted">No votes yet.</p>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Topic progress -->
+        <div class="panel analytics-panel">
+            <h3>Topic Progress</h3>
+            @foreach (var topic in SessionSvc.GetAllTopics())
+            {
+                var qCount  = SessionSvc.GetApprovedQuestions().Count(q => true); // all for now
+                <div class="topic-row">
+                    <span class="topic-title">@topic.Order. @topic.Title</span>
+                    <span class="badge @topic.Status.ToString().ToLower()">@topic.Status</span>
+                </div>
+            }
+        </div>
+
+        <!-- AI Insights -->
+        <div class="panel analytics-panel">
+            <h3>AI Insights</h3>
+            @if (!SessionSvc.GetInsights().Any())
+            {
+                <p class="muted">No insights generated yet.</p>
+            }
+            @foreach (var insight in SessionSvc.GetInsights().Take(20))
+            {
+                <div class="insight-card @insight.Type.ToString().ToLower()" style="margin-bottom:.5rem">
+                    <span class="badge">@insight.Type</span>
+                    <p>@insight.Content</p>
+                    <small>@insight.GeneratedAt.ToString("HH:mm")</small>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool copied;
+    private bool HasUnanswered => SessionSvc.GetApprovedQuestions().Any(q => q.Answer is null);
+
+    private int TotalVotes
+        => PollSvc.GetAllPolls().Sum(p => PollSvc.GetResultTally(p.Id).Values.Sum());
+
+    private async Task ExportCsv()
+    {
+        var sb = new System.Text.StringBuilder();
+
+        // Questions sheet
+        sb.AppendLine("Section,Text,Upvotes,Answered");
+        foreach (var q in SessionSvc.GetApprovedQuestions())
+        {
+            var answered = q.Answer is not null ? "Yes" : "No";
+            sb.AppendLine($"Question,\"{q.Text.Replace("\"", "\"\"")}\",{q.Upvotes},{answered}");
+        }
+        sb.AppendLine();
+
+        // Polls sheet
+        sb.AppendLine("Poll,Option,Votes,Pct");
+        foreach (var poll in PollSvc.GetAllPolls())
+        {
+            var tally = PollSvc.GetResultTally(poll.Id);
+            var total = tally.Values.Sum();
+            foreach (var (opt, cnt) in tally)
+            {
+                var pct = total > 0 ? cnt * 100 / total : 0;
+                sb.AppendLine($"\"{poll.Question.Replace("\"", "\"\"")}\",\"{opt}\",{cnt},{pct}%");
+            }
+        }
+
+        var csv = sb.ToString();
+        var filename = $"analytics-{SessionSvc.SessionCode}-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv";
+        await JS.InvokeVoidAsync("downloadTextFile", filename, csv);
+    }
+
+    private async Task CopyUnanswered()
+    {
+        var lines = SessionSvc.GetApprovedQuestions()
+            .Where(q => q.Answer is null)
+            .Select((q, i) => $"{i + 1}. {q.Text} (\u2191{q.Upvotes} upvotes)")
+            .ToList();
+        var text = string.Join("\n", lines);
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        copied = true;
+        StateHasChanged();
+        await Task.Delay(2500);
+        copied = false;
+        StateHasChanged();
+    }
+}

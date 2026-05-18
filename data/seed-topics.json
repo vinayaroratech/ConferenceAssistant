@@ -1,0 +1,107 @@
+{
+  "sessionId": "AICONF",
+  "title": "The Microsoft AI Stack for .NET",
+  "description": "A living presentation powered by AI agents, real-time polls, and the full Microsoft AI stack for .NET.",
+  "topics": [
+    {
+      "id": "meai",
+      "title": "Microsoft.Extensions.AI",
+      "description": "The abstraction layer for AI in .NET - IChatClient, IEmbeddingGenerator, and the ChatClientBuilder middleware pipeline.",
+      "order": 1,
+      "status": "Upcoming",
+      "talkingPoints": [
+        "Why abstractions matter: swap Ollama for any LLM with one line",
+        "IChatClient: the universal chat interface",
+        "IEmbeddingGenerator: turn text into vectors",
+        "ChatClientBuilder pipeline: add logging, caching, retries, function calling",
+        "AIFunctionFactory: expose any C# method as an AI tool"
+      ],
+      "pollPrompts": [
+        {
+          "context": "Audience has just learned about IChatClient abstraction",
+          "hint": "Ask about which abstraction benefit resonates most"
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "title": "Data Ingestion & Vector Search",
+      "description": "Feeding the brain - markdown documents flow through chunking, enrichment, and embedding into a vector store for semantic search.",
+      "order": 2,
+      "status": "Upcoming",
+      "talkingPoints": [
+        "RAG pattern: Retrieval-Augmented Generation explained",
+        "Pipeline: read → chunk → enrich (summary, keywords) → embed → store",
+        "IVectorStoreRecordCollection: type-safe vector records",
+        "Semantic search vs keyword search",
+        "The snowball effect: each segment adds more knowledge"
+      ],
+      "pollPrompts": [
+        {
+          "context": "Audience understands chunking and embeddings",
+          "hint": "Ask about which RAG component they find most valuable"
+        }
+      ]
+    },
+    {
+      "id": "agents",
+      "title": "Agent Framework",
+      "description": "Specialized AI agents with tools and multi-agent workflows that collaborate to generate polls, analyze responses, and curate knowledge.",
+      "order": 3,
+      "status": "Upcoming",
+      "talkingPoints": [
+        "What makes an agent different from a simple LLM call",
+        "SurveyArchitect: generates context-aware polls using search_knowledge",
+        "ResponseAnalyst: interprets results and stores insights",
+        "KnowledgeCurator: RAG specialist combining local + external knowledge",
+        "Multi-agent workflows: agents collaborating in sequence"
+      ],
+      "pollPrompts": [
+        {
+          "context": "Audience has seen agent tool use",
+          "hint": "Ask about which agent role they find most interesting"
+        }
+      ]
+    },
+    {
+      "id": "mcp",
+      "title": "Model Context Protocol (MCP)",
+      "description": "The bridge between AI and tools - our app exposes 10 MCP tools so any AI client can query session data, search knowledge, and generate summaries.",
+      "order": 4,
+      "status": "Upcoming",
+      "talkingPoints": [
+        "MCP: the USB-C of AI integrations",
+        "Our app as MCP server: 10 tools at /mcp",
+        "Our app as MCP client: querying Microsoft Learn docs",
+        "StreamableHTTP transport: server-sent events for streaming",
+        "Any MCP client can now use our session data"
+      ],
+      "pollPrompts": [
+        {
+          "context": "Audience understands MCP server/client pattern",
+          "hint": "Ask about the most valuable MCP use case they can imagine"
+        }
+      ]
+    },
+    {
+      "id": "closer",
+      "title": "The Living Presentation Closer",
+      "description": "The grand finale - all six technologies fire in sequence as we generate a comprehensive session summary live on stage.",
+      "order": 5,
+      "status": "Upcoming",
+      "talkingPoints": [
+        "The cascade: Copilot → MCP → Agents → RAG → Vector Store → AI abstractions",
+        "Every poll, question, and insight feeds the final summary",
+        "The snowball effect at maximum: richest context of the session",
+        "One command. Six technologies. Working together.",
+        "This presentation was itself the demo"
+      ],
+      "pollPrompts": [
+        {
+          "context": "Full session completed - audience has seen all technologies",
+          "hint": "Ask which technology they're most excited to use in their own projects"
+        }
+      ]
+    }
+  ]
+}

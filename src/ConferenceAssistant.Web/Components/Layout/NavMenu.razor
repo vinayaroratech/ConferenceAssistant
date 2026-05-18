@@ -1,0 +1,61 @@
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">🎙️ Conference Assistant</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span aria-hidden="true">🏠</span> Home
+            </NavLink>
+        </div>
+        <div class="nav-section-label px-3">Present</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="preview">
+                <span aria-hidden="true">🔍</span> Preview &amp; Setup
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="presenter">
+                <span aria-hidden="true">🎤</span> Presenter
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="display">
+                <span aria-hidden="true">📺</span> Display
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="notes">
+                <span aria-hidden="true">🗒</span> Speaker Notes
+            </NavLink>
+        </div>
+        <div class="nav-section-label px-3">Audience</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="organizer">
+                <span aria-hidden="true">🗂</span> Organizer
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="analytics">
+                <span aria-hidden="true">📊</span> Analytics
+            </NavLink>
+        </div>
+        <div class="nav-section-label px-3">System</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="health">
+                <span aria-hidden="true">🩺</span> Health
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="vector-store">
+                <span aria-hidden="true">🧠</span> Vector Store
+            </NavLink>
+        </div>
+    </nav>
+</div>
+

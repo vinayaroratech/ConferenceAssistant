@@ -1,0 +1,175 @@
+@page "/"
+@inject ISessionService SessionSvc
+@inject IPollService PollSvc
+@inject ConferenceAssistant.Core.Services.IConferenceRegistry ConferenceReg
+
+<PageTitle>Conference Assistant</PageTitle>
+
+<div class="home-hero">
+    <h1>Conference Assistant</h1>
+    <p class="subtitle">The Living Presentation - Powered by .NET AI, running locally with Ollama</p>
+</div>
+
+<!-- ── Conference selector ────────────────────────────────────────────── -->
+<div class="home-section-label">Select a Conference</div>
+
+<div class="conference-grid">
+    @foreach (var conf in ConferenceReg.All)
+    {
+        var isActive  = conf.Code == SessionSvc.SessionCode;
+        var isPreviewed = previewedCode == conf.Code;
+        <div class="conference-card @(isActive ? "active-conf" : "") @(isPreviewed ? "previewed-conf" : "")"
+             @onclick="() => PreviewConference(conf.Code)">
+            <div class="conf-code-row">
+                <span class="conf-code">@conf.Code</span>
+                @if (isActive) { <span class="badge active" style="margin-left:.4rem">Active</span> }
+            </div>
+            <h4 class="conf-name">@conf.Name</h4>
+            <p class="conf-desc">@conf.Description</p>
+            <div class="conf-meta">@conf.TopicPreviews.Count topics</div>
+            <div class="conf-actions" @onclick:stopPropagation="true">
+                @if (isActive)
+                {
+                    <a class="btn btn-primary btn-sm" href="/presenter">🎤 Present</a>
+                    <a class="btn btn-ghost   btn-sm" href="/preview">🔍 Setup</a>
+                    <a class="btn btn-ghost   btn-sm" href="/session/@conf.Code">👥 Join</a>
+                }
+                else
+                {
+                    <button class="btn btn-primary btn-sm"
+                            @onclick="() => SwitchConference(conf)"
+                            disabled="@switching">
+                        @(switching && switchingTo == conf.Code ? "⏳ Switching…" : "🔀 Switch")
+                    </button>
+                    @if (switchError != "" && switchingTo == conf.Code)
+                    {
+                        <p class="home-error">⚠️ @switchError</p>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- ── Quick nav ──────────────────────────────────────────────────────── -->
+<div class="home-section-label" style="margin-top:1.5rem">Active Session - @SessionSvc.SessionCode</div>
+
+<div class="quick-nav">
+    <a class="quick-nav-card" href="/preview">
+        <span class="icon">🔍</span><span>Setup</span>
+    </a>
+    <a class="quick-nav-card" href="/presenter">
+        <span class="icon">🎤</span><span>Presenter</span>
+    </a>
+    <a class="quick-nav-card" href="/display">
+        <span class="icon">📺</span><span>Display</span>
+    </a>
+    <a class="quick-nav-card" href="/session/@SessionSvc.SessionCode">
+        <span class="icon">👥</span><span>Join</span>
+    </a>
+    <a class="quick-nav-card" href="/notes">
+        <span class="icon">🗒</span><span>Notes</span>
+    </a>
+    <a class="quick-nav-card" href="/analytics">
+        <span class="icon">📊</span><span>Analytics</span>
+    </a>
+</div>
+
+<!-- ── Topic preview ──────────────────────────────────────────────────── -->
+@{
+    var previewedConf = ConferenceReg.GetByCode(previewedCode);
+    var isPreviewingActive = previewedCode == SessionSvc.SessionCode;
+}
+<div class="topics-section">
+    <div class="topics-section-header">
+        <h3>
+            @if (previewedConf is not null)
+            {
+                @previewedConf.Name
+                if (!isPreviewingActive)
+                {
+                    <span class="preview-badge">preview</span>
+                }
+            }
+            else
+            {
+                @SessionSvc.SessionName
+            }
+        </h3>
+    </div>
+
+    <div class="topic-list">
+        @if (isPreviewingActive || previewedConf is null)
+        {
+            @* Show live session topics with status badges *@
+            @foreach (var t in SessionSvc.GetAllTopics())
+            {
+                <div class="topic-row">
+                    <span class="topic-num">@t.Order</span>
+                    <span class="topic-title">@t.Title</span>
+                    <span class="badge @t.Status.ToString().ToLower()">@t.Status</span>
+                </div>
+            }
+        }
+        else
+        {
+            @* Show static topic previews from the registry *@
+            @foreach (var t in previewedConf.TopicPreviews.OrderBy(t => t.Order))
+            {
+                <div class="topic-row">
+                    <span class="topic-num">@t.Order</span>
+                    <div style="flex:1;min-width:0">
+                        <div class="topic-title">@t.Title</div>
+                        <div class="topic-preview-desc">@t.Description</div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private bool switching = false;
+    private string switchingTo = "";
+    private string switchError = "";
+    private string previewedCode = "";
+
+    protected override void OnInitialized()
+        => previewedCode = SessionSvc.SessionCode;
+
+    private void PreviewConference(string code)
+        => previewedCode = code;
+
+    private async Task SwitchConference(ConferenceAssistant.Core.Models.Conference conf)
+    {
+        switching = true;
+        switchingTo = conf.Code;
+        switchError = "";
+        StateHasChanged();
+
+        try
+        {
+            var topicsPath = ConferenceAssistant.Core.Services.ConferenceRegistry.ResolveDataFile(conf.TopicsPath);
+            var slidesPath = ConferenceAssistant.Core.Services.ConferenceRegistry.ResolveDataFile(conf.SlidesPath);
+
+            if (topicsPath is null)
+                throw new FileNotFoundException($"Topics file not found: {conf.TopicsPath}");
+            if (slidesPath is null)
+                throw new FileNotFoundException($"Slides file not found: {conf.SlidesPath}");
+
+            PollSvc.Reset();
+            await SessionSvc.SwitchConferenceAsync(topicsPath, slidesPath, conf.Code, conf.Name, conf.SessionId);
+            previewedCode = conf.Code;
+        }
+        catch (Exception ex)
+        {
+            switchError = $"Switch failed for {conf.Code}: {ex.Message}";
+        }
+        finally
+        {
+            switching = false;
+            StateHasChanged();
+        }
+    }
+}
+

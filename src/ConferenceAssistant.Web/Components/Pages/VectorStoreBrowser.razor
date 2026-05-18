@@ -1,0 +1,152 @@
+@page "/vector-store"
+@rendermode InteractiveServer
+@using ConferenceAssistant.Ingestion
+@using ConferenceAssistant.Ingestion.Models
+@inject ISemanticSearchService SearchService
+
+<PageTitle>Vector Store - Conference Assistant</PageTitle>
+
+<div class="vs-browser">
+    <div class="vs-header">
+        <h2>🗂 Vector Store Browser</h2>
+        <div class="vs-controls">
+            <select @bind="selectedSource" class="vs-filter">
+                <option value="">All sources</option>
+                <option value="outline">outline</option>
+                <option value="response">response</option>
+                <option value="question">question</option>
+                <option value="mcp-doc">mcp-doc</option>
+            </select>
+            <input class="vs-search" placeholder="Filter by keyword…" @bind="keyword" @bind:event="oninput" />
+            <button class="btn-refresh" @onclick="LoadAsync" disabled="@loading">
+                @(loading ? "Loading…" : "↻ Refresh")
+            </button>
+        </div>
+    </div>
+
+    @if (loading)
+    {
+        <p class="vs-loading">Loading records from vector store…</p>
+    }
+    else if (errorMessage is not null)
+    {
+        <p class="vs-error">⚠️ @errorMessage</p>
+    }
+    else
+    {
+        var filtered = FilteredRecords();
+        <p class="vs-count">
+            Showing <strong>@filtered.Count</strong> of <strong>@allRecords.Count</strong> records
+        </p>
+
+        @if (filtered.Count == 0)
+        {
+            <p class="vs-empty">No records match the current filter. Ingest some data first by running the app - it loads the session outline at startup.</p>
+        }
+        else
+        {
+            <div class="vs-table-wrap">
+                <table class="vs-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Source</th>
+                            <th>Topic</th>
+                            <th>Summary</th>
+                            <th>Keywords</th>
+                            <th>Ingested</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (rec, idx) in filtered.Select((r, i) => (r, i + 1)))
+                        {
+                            <tr class="@(expandedId == rec.Id ? "vs-row expanded" : "vs-row")">
+                                <td class="vs-num">@idx</td>
+                                <td><span class="badge-source src-@rec.Source">@rec.Source</span></td>
+                                <td class="vs-topic">@(string.IsNullOrEmpty(rec.TopicId) ? "-" : rec.TopicId)</td>
+                                <td class="vs-summary">@(rec.Summary ?? "(no summary)")</td>
+                                <td class="vs-keywords">@string.Join(", ", rec.Keywords)</td>
+                                <td class="vs-date">@rec.IngestedAt.ToLocalTime().ToString("HH:mm:ss")</td>
+                                <td>
+                                    <button class="btn-expand" @onclick="() => ToggleExpand(rec.Id)">
+                                        @(expandedId == rec.Id ? "▲" : "▼")
+                                    </button>
+                                </td>
+                            </tr>
+                            @if (expandedId == rec.Id)
+                            {
+                                <tr class="vs-detail">
+                                    <td colspan="7">
+                                        <div class="vs-content-box">
+                                            <strong>ID:</strong> <code>@rec.Id</code><br />
+                                            <strong>Content:</strong>
+                                            <pre class="vs-content-text">@rec.Content</pre>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<ConferenceRecord> allRecords = [];
+    private string selectedSource = "";
+    private string keyword = "";
+    private Guid? expandedId;
+    private bool loading = true;
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        errorMessage = null;
+        StateHasChanged();
+        try
+        {
+            allRecords = (await SearchService.GetAllAsync(200)).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            allRecords = [];
+        }
+        loading = false;
+        StateHasChanged();
+    }
+
+    private List<ConferenceRecord> FilteredRecords()
+    {
+        var q = allRecords.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(selectedSource))
+            q = q.Where(r => r.Source == selectedSource);
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var kw = keyword.Trim().ToLowerInvariant();
+            q = q.Where(r =>
+                r.Content.Contains(kw, StringComparison.OrdinalIgnoreCase) ||
+                (r.Summary?.Contains(kw, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                r.Keywords.Any(k => k.Contains(kw, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return q.ToList();
+    }
+
+    private void ToggleExpand(Guid id)
+    {
+        expandedId = expandedId == id ? null : id;
+    }
+}

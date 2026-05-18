@@ -1,0 +1,79 @@
+@page "/notes"
+@rendermode InteractiveServer
+@layout PresentationLayout
+@implements IDisposable
+@inject ISessionService SessionSvc
+
+<PageTitle>Speaker Notes</PageTitle>
+
+<div class="notes-view">
+    <div class="notes-header">
+        <span class="notes-brand">🎙️ Conference Assistant</span>
+        <span class="notes-timer @(ElapsedWarning ? "timer-warn" : "")">⏱ @ElapsedDisplay</span>
+        <span class="notes-code">@SessionSvc.SessionCode</span>
+    </div>
+
+    @if (SessionSvc.ActiveSlide is not null)
+    {
+        <div class="notes-slide-title">@SessionSvc.ActiveSlide.Title</div>
+
+        @if (!string.IsNullOrEmpty(SessionSvc.ActiveSlide.SpeakerNotes))
+        {
+            <div class="notes-body">@SessionSvc.ActiveSlide.SpeakerNotes</div>
+        }
+        else
+        {
+            <p class="notes-empty">No speaker notes for this slide.</p>
+        }
+    }
+    else
+    {
+        <p class="notes-empty">Waiting for session to start…</p>
+    }
+
+    <div class="notes-footer">
+        <span>Slide @(SessionSvc.ActiveSlideIndex + 1) of @SessionSvc.TotalSlides</span>
+        @if (SessionSvc.GetCurrentTopic() is { } topic)
+        {
+            <span>@topic.Title</span>
+        }
+        @if (SessionSvc.GetNextSlide() is { } next)
+        {
+            <span class="notes-next">Next: @next.Title</span>
+        }
+    </div>
+</div>
+
+@code {
+    private System.Threading.Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        SessionSvc.SlideChanged += OnSlide;
+        _timer = new System.Threading.Timer(_ => InvokeAsync(StateHasChanged),
+            null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private void OnSlide(Slide _) => InvokeAsync(StateHasChanged);
+
+    private string ElapsedDisplay
+    {
+        get
+        {
+            if (SessionSvc.SessionStartedAt is null) return "00:00";
+            var e = DateTimeOffset.UtcNow - SessionSvc.SessionStartedAt.Value;
+            return e.TotalHours >= 1
+                ? $"{(int)e.TotalHours}:{e.Minutes:D2}:{e.Seconds:D2}"
+                : $"{e.Minutes:D2}:{e.Seconds:D2}";
+        }
+    }
+    private bool ElapsedWarning
+        => SessionSvc.SessionStartedAt.HasValue &&
+           (DateTimeOffset.UtcNow - SessionSvc.SessionStartedAt.Value).TotalMinutes >= 45;
+
+    public void Dispose()
+    {
+        SessionSvc.SlideChanged -= OnSlide;
+        _timer?.Dispose();
+    }
+}

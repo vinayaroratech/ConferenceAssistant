@@ -1,0 +1,16 @@
+@inherits LayoutComponentBase
+@inject ConferenceAssistant.Core.Services.ISessionService SessionSvc
+
+<div class="dashboard-layout">
+    <nav class="dashboard-nav">
+        <span class="brand">🎙️ Conference Assistant</span>
+        <span class="conf-name">@SessionSvc.SessionName</span>
+        <span class="session-code">@SessionSvc.SessionCode</span>
+        <a href="/">Home</a>
+    </nav>
+    <main class="dashboard-content">
+        @Body
+    </main>
+</div>
+
+@code { }

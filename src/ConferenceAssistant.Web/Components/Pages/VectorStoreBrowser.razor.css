@@ -1,0 +1,126 @@
+.vs-browser {
+    padding: 1.5rem;
+    font-size: 0.875rem;
+}
+
+.vs-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.vs-header h2 {
+    margin: 0;
+    flex: 1;
+}
+
+.vs-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.vs-filter, .vs-search {
+    padding: 0.35rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.vs-search { width: 200px; }
+
+.btn-refresh {
+    padding: 0.35rem 0.8rem;
+    background: #0d6efd;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.vs-count { color: #555; margin-bottom: 0.75rem; }
+.vs-loading, .vs-empty { color: #777; font-style: italic; }
+.vs-error { color: #dc3545; }
+
+.vs-table-wrap { overflow-x: auto; }
+
+.vs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+}
+
+.vs-table th {
+    background: #f8f9fa;
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+}
+
+.vs-row td {
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: top;
+}
+
+.vs-row:hover td { background: #fafafa; }
+.vs-row.expanded td { background: #fffbe6; }
+
+.vs-num { color: #999; width: 2rem; }
+.vs-topic { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-summary { max-width: 260px; }
+.vs-keywords { max-width: 160px; color: #555; }
+.vs-date { white-space: nowrap; color: #888; }
+
+.badge-source {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.src-outline  { background: #cfe2ff; color: #084298; }
+.src-response { background: #d1e7dd; color: #0a3622; }
+.src-question { background: #fff3cd; color: #664d03; }
+.src-mcp-doc  { background: #e2d9f3; color: #3d1e7c; }
+
+.btn-expand {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.7rem;
+    color: #555;
+}
+
+.vs-detail td {
+    padding: 0;
+    background: #fffbe6;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.vs-content-box {
+    padding: 0.75rem 1rem;
+    border-top: 1px dashed #e0c97a;
+}
+
+.vs-content-text {
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-top: 0.4rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.8rem;
+    max-height: 300px;
+    overflow-y: auto;
+}

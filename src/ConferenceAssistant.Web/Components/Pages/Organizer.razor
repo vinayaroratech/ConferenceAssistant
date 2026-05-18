@@ -1,0 +1,71 @@
+@page "/organizer"
+@rendermode InteractiveServer
+@layout DashboardLayout
+@implements IDisposable
+@inject ISessionService SessionSvc
+@inject IPollService PollSvc
+@inject ConferenceAssistant.Core.Services.IConferenceRegistry ConferenceReg
+
+<PageTitle>Organizer Overview - Conference Assistant</PageTitle>
+
+<div class="organizer-view">
+    <div class="analytics-hero">
+        <h1 class="gradient-text">Organizer Overview</h1>
+        <p>All conferences and their live status</p>
+    </div>
+
+    <div class="conference-grid">
+        @foreach (var conf in ConferenceReg.All)
+        {
+            var isActive = conf.Code == SessionSvc.SessionCode;
+            <div class="conference-card @(isActive ? "active-conf" : "")">
+                <div class="conf-code">@conf.Code</div>
+                <h4>@conf.Name</h4>
+                @if (isActive)
+                {
+                    <span class="badge active">Live Now</span>
+                    @if (SessionSvc.GetCurrentTopic() is { } topic)
+                    {
+                        <p style="margin-top:.5rem;font-size:.82rem">📌 @topic.Title</p>
+                    }
+                    <div class="org-stats">
+                        <span>Slide @(SessionSvc.ActiveSlideIndex + 1)/@SessionSvc.TotalSlides</span>
+                        <span>@SessionSvc.GetPendingQuestions().Count pending Qs</span>
+                        <span>@(PollSvc.GetActivePolls().Any() ? "Poll live" : "No active poll")</span>
+                    </div>
+                    <div class="conf-actions" style="margin-top:.75rem">
+                        <a class="btn btn-sm btn-primary" href="/presenter">🎤 Presenter</a>
+                        <a class="btn btn-sm" href="/display">📺 Display</a>
+                        <a class="btn btn-sm" href="/analytics">📊 Analytics</a>
+                    </div>
+                }
+                else
+                {
+                    <span class="badge upcoming">Standby</span>
+                    <p style="margin-top:.5rem;font-size:.82rem;color:var(--text-3)">@conf.Description</p>
+                    <div class="conf-actions" style="margin-top:.75rem">
+                        <a class="btn btn-sm" href="/">Switch</a>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Quick links -->
+    <div style="padding:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap">
+        <a class="btn" href="/notes">🗒 Speaker Notes</a>
+        <a class="btn" href="/analytics">📊 Analytics</a>
+        <a class="btn" href="/watch/@SessionSvc.SessionCode">👁 Watch View</a>
+        <a class="btn" href="/health">🩺 Health</a>
+    </div>
+</div>
+
+@code {
+    private System.Threading.Timer? _timer;
+
+    protected override void OnInitialized()
+        => _timer = new System.Threading.Timer(_ => InvokeAsync(StateHasChanged),
+            null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+
+    public void Dispose() => _timer?.Dispose();
+}

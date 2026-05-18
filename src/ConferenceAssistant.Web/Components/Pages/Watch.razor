@@ -1,0 +1,75 @@
+@page "/watch/{Code}"
+@rendermode InteractiveServer
+@layout PresentationLayout
+@implements IDisposable
+@inject ISessionService SessionSvc
+@inject IPollService PollSvc
+
+<PageTitle>Watch - Conference Assistant</PageTitle>
+
+<div class="watch-view">
+    @{
+        var activePoll = PollSvc.GetActivePolls().FirstOrDefault();
+    }
+
+    @if (activePoll is not null)
+    {
+        <div class="watch-poll">
+            <h2>📊 @activePoll.Question</h2>
+            @{
+                var tally = PollSvc.GetResultTally(activePoll.Id);
+                var total = tally.Values.Sum();
+            }
+            <div class="poll-bars">
+                @foreach (var (option, count) in tally)
+                {
+                    var pct = total > 0 ? count * 100 / total : 0;
+                    <div class="bar-row">
+                        <span class="bar-label">@option</span>
+                        <div class="bar-track"><div class="bar-fill" style="width:@pct%"></div></div>
+                        <span class="bar-count">@count (@pct%)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (SessionSvc.ActiveSlide is not null)
+    {
+        <SlideRenderer Slide="@SessionSvc.ActiveSlide" Compact="false" />
+    }
+    else
+    {
+        <div class="watch-idle">
+            <h1>🎙️ Conference Assistant</h1>
+            <p>Session <strong>@Code</strong> - waiting for presentation to start…</p>
+        </div>
+    }
+
+    <div class="watch-bar">
+        @if (SessionSvc.GetCurrentTopic() is { } topic)
+        {
+            <span>📌 @topic.Title</span>
+        }
+        <span>Slide @(SessionSvc.ActiveSlideIndex + 1) / @SessionSvc.TotalSlides</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Code { get; set; } = "";
+    private System.Threading.Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        SessionSvc.SlideChanged += OnSlide;
+        _timer = new System.Threading.Timer(_ => InvokeAsync(StateHasChanged),
+            null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    private void OnSlide(Slide _) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        SessionSvc.SlideChanged -= OnSlide;
+        _timer?.Dispose();
+    }
+}

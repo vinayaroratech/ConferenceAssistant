@@ -1,0 +1,107 @@
+[
+  {
+    "id": "containers",
+    "title": "Containers & Kubernetes",
+    "description": "Building minimal .NET container images, Dockerfile best practices, distroless base images, and deploying to AKS.",
+    "order": 1,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "Why container size matters: chiseled Ubuntu vs mcr.microsoft.com/dotnet/aspnet",
+      "SDK-managed container builds: dotnet publish --os linux and container properties in csproj",
+      "Multi-stage Dockerfiles for build isolation",
+      "Non-root containers and security context in Kubernetes",
+      "AKS: managed node pools, auto-scaling, and the Azure CNI overlay",
+      "Helm vs Kustomize: choosing the right templating approach"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience has seen container build options",
+        "hint": "Ask which container deployment target they use most"
+      }
+    ]
+  },
+  {
+    "id": "servicemesh",
+    "title": "Service Mesh & Communication",
+    "description": "mTLS, traffic management, and observability with Istio, Linkerd, and the DAPR building blocks.",
+    "order": 2,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "What a service mesh actually does: proxy sidecar vs eBPF",
+      "mTLS everywhere: zero-trust network within the cluster",
+      "Traffic management: canary, blue-green, and circuit breaking",
+      "DAPR: portable building blocks for state, pub/sub, bindings, and secrets",
+      "gRPC vs HTTP/2 for internal service communication",
+      "Service mesh overhead: latency and CPU cost trade-offs"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience understands microservice communication challenges",
+        "hint": "Ask about their biggest inter-service communication pain point"
+      }
+    ]
+  },
+  {
+    "id": "observability",
+    "title": "Observability with OpenTelemetry",
+    "description": "Traces, metrics, and logs flowing through the OpenTelemetry SDK into Prometheus, Grafana, and Jaeger.",
+    "order": 3,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "The three pillars: traces, metrics, logs - and why all three matter",
+      "OpenTelemetry .NET SDK: AddOpenTelemetry() and the OTLP exporter",
+      "Activity API: adding custom spans and baggage to traces",
+      "System.Diagnostics.Metrics: instruments, histograms, and exemplars",
+      "ILogger + OpenTelemetry: correlation IDs automatically in log output",
+      ".NET Aspire dashboard: OTLP ingestion out of the box for local dev"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience has seen trace instrumentation",
+        "hint": "Ask which observability pillar they invest in least today"
+      }
+    ]
+  },
+  {
+    "id": "resilience",
+    "title": "Resilience Patterns",
+    "description": "Retry, circuit breaker, timeout, hedging, and rate limiting with Microsoft.Extensions.Resilience and Polly v8.",
+    "order": 4,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "Transient fault handling: why retry alone is not enough",
+      "AddStandardResilienceHandler(): the sensible default pipeline",
+      "Circuit breaker: fail fast and let downstream services recover",
+      "Hedging: send duplicate requests to the fastest responder",
+      "Chaos engineering with Simmy: inject faults in tests",
+      "Rate limiting middleware: fixed window, sliding window, token bucket"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience understands why services fail transiently",
+        "hint": "Ask which resilience pattern they have actually needed in production"
+      }
+    ]
+  },
+  {
+    "id": "gitops",
+    "title": "GitOps & CI/CD Pipelines",
+    "description": "GitHub Actions, Flux CD, container image promotion across environments, and shift-left security scanning.",
+    "order": 5,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "GitOps: the cluster always matches what's in the repo",
+      "Flux CD: image automation and Helm release reconciliation",
+      "GitHub Actions: build, test, push image, open PR - all automated",
+      "Environment promotion: dev → staging → production via branch policies",
+      "Container signing with Sigstore Cosign and image verification in Kubernetes",
+      "SBOM generation with dotnet workload install wasm-tools and NuGet audit"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience deploys to cloud environments",
+        "hint": "Ask what their biggest CI/CD pain point is today"
+      }
+    ]
+  }
+]

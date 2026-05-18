@@ -1,0 +1,333 @@
+[
+  {
+    "sessionId": "AICONF",
+    "title": "The Microsoft AI Stack for .NET",
+    "description": "A living presentation powered by AI agents, real-time polls, and the full Microsoft AI stack for .NET.",
+    "topics": [
+      {
+        "id": "meai",
+        "title": "Microsoft.Extensions.AI",
+        "description": "The abstraction layer for AI in .NET - IChatClient, IEmbeddingGenerator, and the ChatClientBuilder middleware pipeline.",
+        "order": 1,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "Why abstractions matter: swap Ollama for any LLM with one line",
+          "IChatClient: the universal chat interface",
+          "IEmbeddingGenerator: turn text into vectors",
+          "ChatClientBuilder pipeline: add logging, caching, retries, function calling",
+          "AIFunctionFactory: expose any C# method as an AI tool"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience has just learned about IChatClient abstraction",
+            "hint": "Ask about which abstraction benefit resonates most"
+          }
+        ]
+      },
+      {
+        "id": "knowledge",
+        "title": "Data Ingestion & Vector Search",
+        "description": "Feeding the brain - markdown documents flow through chunking, enrichment, and embedding into a vector store for semantic search.",
+        "order": 2,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "RAG pattern: Retrieval-Augmented Generation explained",
+          "Pipeline: read → chunk → enrich (summary, keywords) → embed → store",
+          "IVectorStoreRecordCollection: type-safe vector records",
+          "Semantic search vs keyword search",
+          "The snowball effect: each segment adds more knowledge"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience understands chunking and embeddings",
+            "hint": "Ask about which RAG component they find most valuable"
+          }
+        ]
+      },
+      {
+        "id": "agents",
+        "title": "Agent Framework",
+        "description": "Specialized AI agents with tools and multi-agent workflows that collaborate to generate polls, analyze responses, and curate knowledge.",
+        "order": 3,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "What makes an agent different from a simple LLM call",
+          "SurveyArchitect: generates context-aware polls using search_knowledge",
+          "ResponseAnalyst: interprets results and stores insights",
+          "KnowledgeCurator: RAG specialist combining local + external knowledge",
+          "Multi-agent workflows: agents collaborating in sequence"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience has seen agent tool use",
+            "hint": "Ask about which agent role they find most interesting"
+          }
+        ]
+      },
+      {
+        "id": "mcp",
+        "title": "Model Context Protocol (MCP)",
+        "description": "The bridge between AI and tools - our app exposes 10 MCP tools so any AI client can query session data, search knowledge, and generate summaries.",
+        "order": 4,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "MCP: the USB-C of AI integrations",
+          "Our app as MCP server: 10 tools at /mcp",
+          "Our app as MCP client: querying Microsoft Learn docs",
+          "StreamableHTTP transport: server-sent events for streaming",
+          "Any MCP client can now use our session data"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience understands MCP server/client pattern",
+            "hint": "Ask about the most valuable MCP use case they can imagine"
+          }
+        ]
+      },
+      {
+        "id": "closer",
+        "title": "The Living Presentation Closer",
+        "description": "The grand finale - all six technologies fire in sequence as we generate a comprehensive session summary live on stage.",
+        "order": 5,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "The cascade: Copilot → MCP → Agents → RAG → Vector Store → AI abstractions",
+          "Every poll, question, and insight feeds the final summary",
+          "The snowball effect at maximum: richest context of the session",
+          "One command. Six technologies. Working together.",
+          "This presentation was itself the demo"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Full session completed - audience has seen all technologies",
+            "hint": "Ask which technology they're most excited to use in their own projects"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "sessionId": "DOTNET26",
+    "title": ".NET 10 Deep Dive",
+    "description": "Explore C# 14 features, performance improvements, and the new runtime capabilities shipping in .NET 10.",
+    "topics": [
+      {
+        "id": "csharp14",
+        "title": "C# 14 New Features",
+        "description": "Field access in auto-properties, first-class spans, extension members, and the new params collections overhaul.",
+        "order": 1,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "field keyword: access the backing field from auto-property accessors",
+          "First-class Span<T>: pass spans directly without explicit casts",
+          "Extension members: add properties, indexers, and static members to any type",
+          "params collections: works with IEnumerable<T>, Span<T>, and custom types",
+          "Implicit indexer access in object initializers",
+          "Partial properties and partial indexers"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience has seen the field keyword and extension members",
+            "hint": "Ask which C# 14 feature they are most excited to use"
+          }
+        ]
+      },
+      {
+        "id": "performance",
+        "title": "Performance Improvements",
+        "description": "JIT enhancements, SIMD vectorisation, runtime startup time, and what the .NET 10 benchmarks actually show.",
+        "order": 2,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "Dynamic PGO is now on by default and smarter than ever",
+          "AVX-512 auto-vectorisation for numeric workloads",
+          "Ahead-of-time publication: native AOT on server and mobile",
+          "Startup time improvements in the new Blazor WASM runtime",
+          "GC: region-based heap and lower pause times",
+          "BenchmarkDotNet: measuring what actually matters"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience understands JIT and GC basics",
+            "hint": "Ask about which performance area matters most to their projects"
+          }
+        ]
+      },
+      {
+        "id": "aspnet10",
+        "title": "ASP.NET Core 10",
+        "description": "OpenAPI 3.1 built-in, minimal-API route groups, Blazor hybrid improvements, and the new Identity v3.",
+        "order": 3,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "Built-in OpenAPI 3.1 document generation - no more Swashbuckle",
+          "Minimal API route groups with filters and middleware",
+          "Blazor: new static SSR streaming mode, enhanced forms",
+          "Identity v3: passkey support out of the box",
+          "SignalR: long-running Hub methods and back-pressure",
+          "New IHostedLifecycleService for fine-grained startup/shutdown"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience builds web APIs or Blazor apps",
+            "hint": "Ask which ASP.NET Core 10 feature they will adopt first"
+          }
+        ]
+      },
+      {
+        "id": "runtimeapis",
+        "title": "New Runtime & Library APIs",
+        "description": "Tensor<T>, LINQ improvements, TimeProvider everywhere, and the new System.Text.Json source-gen defaults.",
+        "order": 4,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "System.Numerics.Tensors: Tensor<T> for AI and ML workloads",
+          "LINQ: CountBy, AggregateBy, Index - cleaner aggregations",
+          "TimeProvider: testable time abstraction is now everywhere in the BCL",
+          "System.Text.Json: AOT-first, JsonSchemaExporter for AI tool schemas",
+          "Cryptography: post-quantum algorithms (ML-KEM, ML-DSA)",
+          "System.IO.Compression: Zstandard (zstd) support"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience has heard about Tensor<T> and new LINQ operators",
+            "hint": "Ask which new API they plan to use soonest"
+          }
+        ]
+      },
+      {
+        "id": "devtools",
+        "title": "Developer Tooling & SDK",
+        "description": "SDK workload improvements, dotnet run with project detection, the new build output layout, and .NET Aspire 9.",
+        "order": 5,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "dotnet run: smarter project and launch-profile detection",
+          "New build output layout: artifacts/ folder at solution root",
+          "Hot reload: wider coverage including interfaces and generics",
+          ".NET Aspire 9: dashboard redesign, Azure deployment wizard",
+          "NuGet v3 client: faster restore and package pruning",
+          "Visual Studio 2022 copilot integration improvements"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience uses Visual Studio or the dotnet CLI daily",
+            "hint": "Ask which tooling improvement saves them the most time"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "sessionId": "CLOUDNATIVE",
+    "title": "Cloud-Native Patterns with .NET",
+    "description": "Containers, service mesh, observability, and resilience patterns for building cloud-native .NET applications.",
+    "topics": [
+      {
+        "id": "containers",
+        "title": "Containers & Kubernetes",
+        "description": "Building minimal .NET container images, Dockerfile best practices, distroless base images, and deploying to AKS.",
+        "order": 1,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "Why container size matters: chiseled Ubuntu vs mcr.microsoft.com/dotnet/aspnet",
+          "SDK-managed container builds: dotnet publish --os linux and container properties in csproj",
+          "Multi-stage Dockerfiles for build isolation",
+          "Non-root containers and security context in Kubernetes",
+          "AKS: managed node pools, auto-scaling, and the Azure CNI overlay",
+          "Helm vs Kustomize: choosing the right templating approach"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience has seen container build options",
+            "hint": "Ask which container deployment target they use most"
+          }
+        ]
+      },
+      {
+        "id": "servicemesh",
+        "title": "Service Mesh & Communication",
+        "description": "mTLS, traffic management, and observability with Istio, Linkerd, and the DAPR building blocks.",
+        "order": 2,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "What a service mesh actually does: proxy sidecar vs eBPF",
+          "mTLS everywhere: zero-trust network within the cluster",
+          "Traffic management: canary, blue-green, and circuit breaking",
+          "DAPR: portable building blocks for state, pub/sub, bindings, and secrets",
+          "gRPC vs HTTP/2 for internal service communication",
+          "Service mesh overhead: latency and CPU cost trade-offs"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience understands microservice communication challenges",
+            "hint": "Ask about their biggest inter-service communication pain point"
+          }
+        ]
+      },
+      {
+        "id": "observability",
+        "title": "Observability with OpenTelemetry",
+        "description": "Traces, metrics, and logs flowing through the OpenTelemetry SDK into Prometheus, Grafana, and Jaeger.",
+        "order": 3,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "The three pillars: traces, metrics, logs - and why all three matter",
+          "OpenTelemetry .NET SDK: AddOpenTelemetry() and the OTLP exporter",
+          "Activity API: adding custom spans and baggage to traces",
+          "System.Diagnostics.Metrics: instruments, histograms, and exemplars",
+          "ILogger + OpenTelemetry: correlation IDs automatically in log output",
+          ".NET Aspire dashboard: OTLP ingestion out of the box for local dev"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience has seen trace instrumentation",
+            "hint": "Ask which observability pillar they invest in least today"
+          }
+        ]
+      },
+      {
+        "id": "resilience",
+        "title": "Resilience Patterns",
+        "description": "Retry, circuit breaker, timeout, hedging, and rate limiting with Microsoft.Extensions.Resilience and Polly v8.",
+        "order": 4,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "Transient fault handling: why retry alone is not enough",
+          "AddStandardResilienceHandler(): the sensible default pipeline",
+          "Circuit breaker: fail fast and let downstream services recover",
+          "Hedging: send duplicate requests to the fastest responder",
+          "Chaos engineering with Simmy: inject faults in tests",
+          "Rate limiting middleware: fixed window, sliding window, token bucket"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience understands why services fail transiently",
+            "hint": "Ask which resilience pattern they have actually needed in production"
+          }
+        ]
+      },
+      {
+        "id": "gitops",
+        "title": "GitOps & CI/CD Pipelines",
+        "description": "GitHub Actions, Flux CD, container image promotion across environments, and shift-left security scanning.",
+        "order": 5,
+        "status": "Upcoming",
+        "talkingPoints": [
+          "GitOps: the cluster always matches what's in the repo",
+          "Flux CD: image automation and Helm release reconciliation",
+          "GitHub Actions: build, test, push image, open PR - all automated",
+          "Environment promotion: dev → staging → production via branch policies",
+          "Container signing with Sigstore Cosign and image verification in Kubernetes",
+          "SBOM generation with dotnet workload install wasm-tools and NuGet audit"
+        ],
+        "pollPrompts": [
+          {
+            "context": "Audience deploys to cloud environments",
+            "hint": "Ask what their biggest CI/CD pain point is today"
+          }
+        ]
+      }
+    ]
+  }
+]

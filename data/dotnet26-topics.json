@@ -1,0 +1,107 @@
+[
+  {
+    "id": "csharp14",
+    "title": "C# 14 New Features",
+    "description": "Field access in auto-properties, first-class spans, extension members, and the new params collections overhaul.",
+    "order": 1,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "field keyword: access the backing field from auto-property accessors",
+      "First-class Span<T>: pass spans directly without explicit casts",
+      "Extension members: add properties, indexers, and static members to any type",
+      "params collections: works with IEnumerable<T>, Span<T>, and custom types",
+      "Implicit indexer access in object initializers",
+      "Partial properties and partial indexers"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience has seen the field keyword and extension members",
+        "hint": "Ask which C# 14 feature they are most excited to use"
+      }
+    ]
+  },
+  {
+    "id": "performance",
+    "title": "Performance Improvements",
+    "description": "JIT enhancements, SIMD vectorisation, runtime startup time, and what the .NET 10 benchmarks actually show.",
+    "order": 2,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "Dynamic PGO is now on by default and smarter than ever",
+      "AVX-512 auto-vectorisation for numeric workloads",
+      "Ahead-of-time publication: native AOT on server and mobile",
+      "Startup time improvements in the new Blazor WASM runtime",
+      "GC: region-based heap and lower pause times",
+      "BenchmarkDotNet: measuring what actually matters"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience understands JIT and GC basics",
+        "hint": "Ask about which performance area matters most to their projects"
+      }
+    ]
+  },
+  {
+    "id": "aspnet10",
+    "title": "ASP.NET Core 10",
+    "description": "OpenAPI 3.1 built-in, minimal-API route groups, Blazor hybrid improvements, and the new Identity v3.",
+    "order": 3,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "Built-in OpenAPI 3.1 document generation - no more Swashbuckle",
+      "Minimal API route groups with filters and middleware",
+      "Blazor: new static SSR streaming mode, enhanced forms",
+      "Identity v3: passkey support out of the box",
+      "SignalR: long-running Hub methods and back-pressure",
+      "New IHostedLifecycleService for fine-grained startup/shutdown"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience builds web APIs or Blazor apps",
+        "hint": "Ask which ASP.NET Core 10 feature they will adopt first"
+      }
+    ]
+  },
+  {
+    "id": "runtimeapis",
+    "title": "New Runtime & Library APIs",
+    "description": "Tensor<T>, LINQ improvements, TimeProvider everywhere, and the new System.Text.Json source-gen defaults.",
+    "order": 4,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "System.Numerics.Tensors: Tensor<T> for AI and ML workloads",
+      "LINQ: CountBy, AggregateBy, Index - cleaner aggregations",
+      "TimeProvider: testable time abstraction is now everywhere in the BCL",
+      "System.Text.Json: AOT-first, JsonSchemaExporter for AI tool schemas",
+      "Cryptography: post-quantum algorithms (ML-KEM, ML-DSA)",
+      "System.IO.Compression: Zstandard (zstd) support"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience has heard about Tensor<T> and new LINQ operators",
+        "hint": "Ask which new API they plan to use soonest"
+      }
+    ]
+  },
+  {
+    "id": "devtools",
+    "title": "Developer Tooling & SDK",
+    "description": "SDK workload improvements, dotnet run with project detection, the new build output layout, and .NET Aspire 9.",
+    "order": 5,
+    "status": "Upcoming",
+    "talkingPoints": [
+      "dotnet run: smarter project and launch-profile detection",
+      "New build output layout: artifacts/ folder at solution root",
+      "Hot reload: wider coverage including interfaces and generics",
+      ".NET Aspire 9: dashboard redesign, Azure deployment wizard",
+      "NuGet v3 client: faster restore and package pruning",
+      "Visual Studio 2022 copilot integration improvements"
+    ],
+    "pollPrompts": [
+      {
+        "context": "Audience uses Visual Studio or the dotnet CLI daily",
+        "hint": "Ask which tooling improvement saves them the most time"
+      }
+    ]
+  }
+]

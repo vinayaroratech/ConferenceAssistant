@@ -1,0 +1,205 @@
+@page "/session/{Code}"
+@rendermode InteractiveServer
+@layout DashboardLayout
+@implements IDisposable
+@inject ISessionService SessionSvc
+@inject IPollService PollSvc
+
+<PageTitle>Conference Assistant - Join</PageTitle>
+
+@if (!IsValidCode)
+{
+    <div style="max-width:400px;margin:4rem auto;text-align:center;padding:2rem">
+        <h2>❌ Session not found</h2>
+        <p>The session code <strong>@Code</strong> doesn’t match any active session.</p>
+        <p>Active session: <strong>@SessionSvc.SessionCode</strong></p>
+        <a class="btn btn-primary" href="/session/@SessionSvc.SessionCode">Join @SessionSvc.SessionCode</a>
+    </div>
+    return;
+}
+
+<div class="session-view">
+    @if (SessionSvc.IsEnded)
+    {
+        <div class="session-ended-banner">🎉 Session has ended - thanks for joining!</div>
+    }
+    <!-- Current slide preview -->
+    @if (SessionSvc.ActiveSlide is not null)
+    {
+        <div class="session-slide-preview">
+            <div class="session-slide-label">🖥️ On Screen Now</div>
+            <SlideRenderer Slide="@SessionSvc.ActiveSlide" Compact="true" />
+        </div>
+    }
+    else
+    {
+        <h2>@(SessionSvc.GetCurrentTopic()?.Title ?? "Waiting for session to start…")</h2>
+    }
+
+    @{
+        var activePolls = PollSvc.GetActivePolls();
+        var activePoll = activePolls.FirstOrDefault();
+    }
+
+    @if (activePoll is not null)
+    {
+        <div class="poll-voting">
+            <h3>📊 @activePoll.Question</h3>
+            @if (hasVoted)
+            {
+                var tally = PollSvc.GetResultTally(activePoll.Id);
+                var total = tally.Values.Sum();
+                <p>✅ Thanks for voting! Live results:</p>
+                <div class="poll-results-bars">
+                    @foreach (var (option, count) in tally)
+                    {
+                        var pct = total > 0 ? count * 100 / total : 0;
+                        <div class="bar-row">
+                            <span class="bar-label">@option</span>
+                            <div class="bar-track">
+                                <div class="bar-fill" style="width: @pct%"></div>
+                            </div>
+                            <span class="bar-count">@count (@pct%)</span>
+                        </div>
+                    }
+                </div>
+                <p class="vote-count">Total votes: @total</p>
+            }
+            else
+            {
+                <div class="poll-options">
+                    @foreach (var option in activePoll.Options)
+                    {
+                        <button class="poll-option-btn" @onclick="() => SubmitVote(activePoll.Id, option)">
+                            @option
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="waiting">⏳ Waiting for next poll…</p>
+    }
+
+    <div class="question-section">
+        @if (!SessionSvc.IsEnded)
+        {
+            <h3>Ask a Question</h3>
+            <div class="question-input">
+                <input @bind="newQuestion" @bind:event="oninput"
+                       placeholder="Type your question…"
+                       @onkeydown="OnKeyDown" />
+                <button class="btn btn-primary" @onclick="AskQuestion"
+                        disabled="@(!CanAskQuestion)">
+                    Ask
+                </button>
+            </div>
+            @if (questionSent)
+            {
+                <small>✅ Question submitted!</small>
+            }
+            @if (_lastQuestionAt != DateTimeOffset.MinValue &&
+                 (DateTimeOffset.UtcNow - _lastQuestionAt).TotalSeconds < 15)
+            {
+                <small class="muted">Next question available in @((int)(15 - (DateTimeOffset.UtcNow - _lastQuestionAt).TotalSeconds))s</small>
+            }
+        }
+        else
+        {
+            <p class="muted">Questions are closed for this session.</p>
+        }
+    </div>
+
+    <div class="questions-feed">
+        <h3>Questions (@SessionSvc.GetApprovedQuestions().Count)</h3>
+        @foreach (var q in SessionSvc.GetApprovedQuestions())
+        {
+            <div class="question-card">
+                <p>@q.Text</p>
+                <button class="upvote-btn" @onclick="() => Upvote(q.Id)">👍 @q.Upvotes</button>
+                @if (q.Answer is not null)
+                {
+                    <p class="answer">💬 @q.Answer</p>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Code { get; set; } = "";
+    private string newQuestion = "";
+    private string? votedPollId = null;   // tracks which poll was voted on, not just a bool
+    private bool questionSent = false;
+    private System.Threading.Timer? _refreshTimer;
+    // Stable per-connection voter ID - used for server-side vote dedup
+    private readonly string _voterId = Guid.NewGuid().ToString("N");
+    // Question rate-limit: one every 15 s
+    private DateTimeOffset _lastQuestionAt = DateTimeOffset.MinValue;
+    private bool CanAskQuestion => !SessionSvc.IsEnded &&
+        (DateTimeOffset.UtcNow - _lastQuestionAt).TotalSeconds >= 15 &&
+        !string.IsNullOrWhiteSpace(newQuestion);
+
+    private bool IsValidCode
+        => string.Equals(Code, SessionSvc.SessionCode, StringComparison.OrdinalIgnoreCase);
+
+    private bool hasVoted => votedPollId is not null && PollSvc.GetActivePolls().Any(p => p.Id == votedPollId);
+
+    protected override void OnInitialized()
+    {
+        // Slide preview updates instantly when presenter advances
+        SessionSvc.SlideChanged += OnSlideChanged;
+        SessionSvc.QuestionsChanged += OnQuestionsChanged;
+
+        // Refresh every 3 seconds so a newly launched poll or new answers appear automatically
+        _refreshTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged),
+            null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    private void OnSlideChanged(Slide _) => InvokeAsync(StateHasChanged);
+    private void OnQuestionsChanged() => InvokeAsync(StateHasChanged);
+
+    private void SubmitVote(string pollId, string option)
+    {
+        if (SessionSvc.IsEnded) return;
+        try
+        {
+            PollSvc.SubmitResponse(pollId, option, _voterId);
+            votedPollId = pollId;
+        }
+        catch { /* poll closed or already voted */ }
+    }
+
+    private async Task AskQuestion()
+    {
+        if (!CanAskQuestion) return;
+        SessionSvc.AddQuestion(newQuestion);
+        _lastQuestionAt = DateTimeOffset.UtcNow;
+        newQuestion = "";
+        questionSent = true;
+        await Task.Delay(2000);
+        questionSent = false;
+        StateHasChanged();
+    }
+
+    private void Upvote(string questionId)
+    {
+        SessionSvc.UpvoteQuestion(questionId);
+        StateHasChanged();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await AskQuestion();
+    }
+
+    public void Dispose()
+    {
+        SessionSvc.SlideChanged -= OnSlideChanged;
+        SessionSvc.QuestionsChanged -= OnQuestionsChanged;
+        _refreshTimer?.Dispose();
+    }
+}

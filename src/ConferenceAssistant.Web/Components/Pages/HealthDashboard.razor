@@ -1,0 +1,117 @@
+@page "/health"
+@using Microsoft.Extensions.Diagnostics.HealthChecks
+@inject HealthCheckService HealthCheckService
+@rendermode InteractiveServer
+
+<PageTitle>System Health - Conference Assistant</PageTitle>
+
+<div class="health-dashboard">
+    <div class="health-header">
+        <h2>System Health</h2>
+        <div class="health-meta">
+            @if (report is not null)
+            {
+                <span class="overall-badge @StatusClass(report.Status)">@report.Status</span>
+                <span class="updated-at">Updated @lastChecked.ToString("HH:mm:ss")</span>
+            }
+            <button class="btn-refresh" @onclick="RefreshAsync" disabled="@checking">
+                @(checking ? "Checking…" : "↻ Refresh")
+            </button>
+        </div>
+    </div>
+
+    @if (report is null)
+    {
+        <p class="checking-msg">Running health checks…</p>
+    }
+    else
+    {
+        <div class="health-cards">
+            @foreach (var (name, entry) in report.Entries)
+            {
+                <div class="health-card @StatusClass(entry.Status)">
+                    <div class="card-header">
+                        <span class="card-icon">@ComponentIcon(name)</span>
+                        <span class="card-name">@name</span>
+                        <span class="card-badge @StatusClass(entry.Status)">@entry.Status</span>
+                    </div>
+                    <p class="card-desc">@entry.Description</p>
+                    @if (entry.Exception is not null)
+                    {
+                        <p class="card-error">@entry.Exception.Message</p>
+                    }
+                    <div class="card-footer">
+                        <span class="card-duration">@entry.Duration.TotalMilliseconds.ToString("0")ms</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="health-summary">
+            <h3>Summary</h3>
+            <table class="summary-table">
+                <thead>
+                    <tr><th>Component</th><th>Status</th><th>Duration</th><th>Details</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var (name, entry) in report.Entries)
+                    {
+                        <tr class="row-@StatusClass(entry.Status)">
+                            <td>@name</td>
+                            <td><span class="badge-sm @StatusClass(entry.Status)">@entry.Status</span></td>
+                            <td>@entry.Duration.TotalMilliseconds.ToString("0")ms</td>
+                            <td>@entry.Description</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private HealthReport? report;
+    private DateTime lastChecked;
+    private bool checking = true;
+    private System.Threading.Timer? autoRefreshTimer;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshAsync();
+            // Auto-refresh every 30 seconds
+            autoRefreshTimer = new System.Threading.Timer(
+                async _ => await RefreshAsync(),
+                null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        checking = true;
+        await InvokeAsync(StateHasChanged);
+        report = await HealthCheckService.CheckHealthAsync();
+        lastChecked = DateTime.Now;
+        checking = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string StatusClass(HealthStatus status) => status switch
+    {
+        HealthStatus.Healthy   => "healthy",
+        HealthStatus.Degraded  => "degraded",
+        HealthStatus.Unhealthy => "unhealthy",
+        _                      => "unknown"
+    };
+
+    private static string ComponentIcon(string name) => name.ToLower() switch
+    {
+        "ollama"       => "🤖",
+        "qdrant"       => "🔍",
+        "session-data" => "📋",
+        _              => "⚙️"
+    };
+
+    public void Dispose() => autoRefreshTimer?.Dispose();
+}

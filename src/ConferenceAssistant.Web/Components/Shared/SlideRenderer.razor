@@ -1,0 +1,71 @@
+@using ConferenceAssistant.Core.Models
+
+@if (Slide is null) { return; }
+
+<div class="slide-renderer @(Compact ? "compact" : "full") slide-@Slide.Type.ToString().ToLower() layout-@Slide.Layout.ToString().ToLower()">
+    @switch (Slide.Type)
+    {
+        case SlideType.Title:
+            <div class="slide-title-content">
+                <h1>@Slide.Title</h1>
+                @if (!string.IsNullOrEmpty(Slide.Subtitle))
+                {
+                    <h2>@Slide.Subtitle</h2>
+                }
+            </div>
+            break;
+
+        case SlideType.Section:
+            <div class="slide-section-content">
+                <h1>@Slide.Title</h1>
+            </div>
+            break;
+
+        case SlideType.Code:
+            <div class="slide-code-content">
+                @if (!string.IsNullOrEmpty(Slide.Title))
+                {
+                    <h2>@Slide.Title</h2>
+                }
+                <pre><code class="language-@Slide.CodeLanguage">@Slide.CodeSnippet</code></pre>
+            </div>
+            break;
+
+        case SlideType.Content:
+            <div class="slide-content-content">
+                @if (!string.IsNullOrEmpty(Slide.Title))
+                {
+                    <h2>@Slide.Title</h2>
+                }
+                @if (Slide.Bullets.Any())
+                {
+                    <ul>
+                        @foreach (var bullet in Slide.Bullets)
+                        {
+                            <li>@bullet</li>
+                        }
+                    </ul>
+                }
+                else if (!string.IsNullOrEmpty(Slide.BodyMarkdown))
+                {
+                    <p>@Slide.BodyMarkdown</p>
+                }
+            </div>
+            break;
+
+        case SlideType.Poll:
+            <div class="slide-poll-content">
+                <h2>📊 Poll Active</h2>
+            </div>
+            break;
+
+        case SlideType.Blank:
+        default:
+            break;
+    }
+</div>
+
+@code {
+    [Parameter] public Slide? Slide { get; set; }
+    [Parameter] public bool Compact { get; set; } = false;
+}

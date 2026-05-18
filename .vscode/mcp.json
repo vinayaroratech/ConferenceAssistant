@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "ConferenceAssistant": {
+      "type": "http",
+      "url": "http://localhost:5036/mcp"
+    }
+  }
+}

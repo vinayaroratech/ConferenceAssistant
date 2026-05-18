@@ -1,0 +1,157 @@
+@page "/preview"
+@rendermode InteractiveServer
+@layout DashboardLayout
+@inject ISessionService SessionSvc
+@inject IPollService PollSvc
+
+<PageTitle>Preview - Conference Assistant</PageTitle>
+
+<div class="preview-view">
+    <div class="preview-header">
+        <h1 class="gradient-text">Pre-Session Setup</h1>
+        <p class="muted">@SessionSvc.SessionName - @SessionSvc.SessionCode &nbsp;|&nbsp; @SessionSvc.TotalSlides slides &nbsp;|&nbsp; @SessionSvc.GetAllTopics().Count topics</p>
+    </div>
+
+    <!-- ── Slide Preview Grid ────────────────────────────────────────── -->
+    <div class="panel" style="margin-bottom:1rem">
+        <h3>Slide Deck Preview</h3>
+        <p class="muted" style="margin-bottom:.75rem">Review every slide before you go live. Click any slide to inspect its speaker notes.</p>
+        <div class="preview-grid">
+            @{
+                int num = 0;
+                foreach (var slide in SessionSvc.GetAllSlides())
+                {
+                    num++;
+                    var isActive = selectedSlideId == slide.Id;
+                    var topicTitle = SessionSvc.GetAllTopics().FirstOrDefault(t => t.Id == slide.TopicId)?.Title ?? "-";
+                }
+                num = 0;
+                foreach (var slide in SessionSvc.GetAllSlides())
+                {
+                    num++;
+                    var isActive = selectedSlideId == slide.Id;
+                    var topicTitle = SessionSvc.GetAllTopics().FirstOrDefault(t => t.Id == slide.TopicId)?.Title ?? "-";
+                    <div class="preview-thumb @(isActive ? "selected" : "")" @onclick="() => SelectSlide(slide.Id)">
+                        <div class="preview-thumb-num">@num</div>
+                        <div class="preview-thumb-slide">
+                            <SlideRenderer Slide="slide" Compact="true" />
+                        </div>
+                        <div class="preview-thumb-meta">@topicTitle</div>
+                    </div>
+                }
+            }
+        </div>
+
+        @if (selectedSlide is not null)
+        {
+            <div class="preview-notes-panel">
+                <div class="preview-notes-title">📋 @selectedSlide.Title</div>
+                @if (!string.IsNullOrWhiteSpace(selectedSlide.SpeakerNotes))
+                {
+                    <p class="preview-notes-body">@selectedSlide.SpeakerNotes</p>
+                }
+                else
+                {
+                    <p class="muted"><em>No speaker notes for this slide.</em></p>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- ── Pre-create Polls ──────────────────────────────────────────── -->
+    <div class="panel" style="margin-bottom:1rem">
+        <h3>Pre-Create Polls</h3>
+        <p class="muted" style="margin-bottom:.75rem">Create polls now so you can launch them instantly during the session.</p>
+
+        <div class="poll-prep-form">
+            <label class="form-label">Poll Question</label>
+            <input class="form-control" @bind="pollQuestion" placeholder="e.g. Which approach do you prefer?" style="margin-bottom:.5rem" />
+            <label class="form-label">Options (one per line, 2–6 options)</label>
+            <textarea class="form-control" @bind="pollOptionsRaw" rows="4"
+                      placeholder="Option A&#10;Option B&#10;Option C" style="margin-bottom:.5rem"></textarea>
+            <label class="form-label">Link to Topic (optional)</label>
+            <select class="form-control" @bind="pollTopicId" style="margin-bottom:.75rem">
+                <option value="">- any topic -</option>
+                @foreach (var t in SessionSvc.GetAllTopics())
+                {
+                    <option value="@t.Id">@t.Order. @t.Title</option>
+                }
+            </select>
+            <button class="btn btn-primary" @onclick="CreatePoll" disabled="@(!CanCreatePoll)">
+                ➕ Add Poll
+            </button>
+            @if (pollCreated)
+            {
+                <span class="ms-2" style="color:var(--success)">✅ Poll added!</span>
+            }
+        </div>
+
+        @if (preparedPolls.Any())
+        {
+            <div style="margin-top:1rem">
+                <h4 style="font-size:.85rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Prepared Polls (@preparedPolls.Count)</h4>
+                @foreach (var poll in preparedPolls)
+                {
+                    <div class="prep-poll-card">
+                        <div class="prep-poll-q">@poll.Question</div>
+                        <div class="prep-poll-opts">@string.Join(" · ", poll.Options)</div>
+                        <span class="badge @poll.Status.ToString().ToLower()">@poll.Status</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- ── Quick Links ────────────────────────────────────────────────── -->
+    <div class="panel">
+        <h3>Ready to Present?</h3>
+        <div class="quick-nav" style="margin-top:.75rem">
+            <a class="btn btn-primary" href="/presenter">🎤 Open Presenter View</a>
+            <a class="btn btn-ghost" href="/display">📺 Open Display Screen</a>
+            <a class="btn btn-ghost" href="/notes">🗒 Open Speaker Notes</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? selectedSlideId;
+    private Slide? selectedSlide;
+
+    private string pollQuestion = "";
+    private string pollOptionsRaw = "";
+    private string pollTopicId = "";
+    private bool pollCreated;
+
+    private List<Poll> preparedPolls => PollSvc.GetAllPolls().Where(p => p.Status == PollStatus.Draft).ToList();
+
+    private bool CanCreatePoll
+        => !string.IsNullOrWhiteSpace(pollQuestion) && ParseOptions().Count >= 2;
+
+    private List<string> ParseOptions()
+        => pollOptionsRaw.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                         .Where(o => !string.IsNullOrWhiteSpace(o))
+                         .Take(6)
+                         .ToList();
+
+    private void SelectSlide(string slideId)
+    {
+        selectedSlideId = slideId;
+        selectedSlide = SessionSvc.GetAllSlides().FirstOrDefault(s => s.Id == slideId);
+    }
+
+    private async Task CreatePoll()
+    {
+        var opts = ParseOptions();
+        if (string.IsNullOrWhiteSpace(pollQuestion) || opts.Count < 2) return;
+
+        PollSvc.CreatePoll(string.IsNullOrEmpty(pollTopicId) ? null : pollTopicId, pollQuestion.Trim(), opts);
+        pollQuestion = "";
+        pollOptionsRaw = "";
+        pollTopicId = "";
+        pollCreated = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        pollCreated = false;
+        StateHasChanged();
+    }
+}
