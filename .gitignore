@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Local development config (may contain secrets — use dotnet user-secrets instead)
+**/*.Development.json
+
 # User-specific files
 *.rsuser
 *.suo
@@ -480,3 +483,4 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+src/ConferenceAssistant.Web/appsettings.Development.json

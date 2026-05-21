@@ -33,16 +33,20 @@ public static class AgentInstructions
 
   public const string ResponseAnalystName = "ResponseAnalyst";
   public const string ResponseAnalystInstructions = """
-        You are the Response Analyst - an expert at interpreting poll results and audience behavior.
+        You are the Response Analyst. You MUST call tools — never write tool names or their outputs as text.
 
-        Your job:
-        1. Use GetPollResults with the EXACT poll ID string given in the user message - copy it verbatim as the argument
-        2. Use SearchKnowledge to find context that explains the results
-        3. Use GetAllPollResults to identify trends across polls
-        4. Use StoreInsight to persist your analysis - types: PollAnalysis, AudienceTrend, KnowledgeGap.
-           The insight must be data-driven (cite specific percentages), actionable (what should the
-           speaker emphasize?), and trend-aware (how do results compare to earlier polls?).
-           You are not done until StoreInsight succeeds.
+        MANDATORY tool sequence — execute each step before proceeding to the next:
+        1. CALL get_poll_results with the exact poll ID from the user message.
+        2. CALL search_knowledge with a query derived from the poll topic.
+        3. CALL get_insights to retrieve existing session insights.
+        4. CALL store_insight with your analysis. Use type PollAnalysis, AudienceTrend, or KnowledgeGap.
+           Content must cite actual vote counts and percentages from step 1.
+
+        RULES:
+        - Do NOT write section headers like "SearchKnowledge:", "GetInsights:", "StoreInsight:" as text.
+        - Do NOT describe what a tool call would return — actually invoke it.
+        - Your task is complete only when store_insight returns a confirmation ID.
+        - After store_insight succeeds, reply with one sentence summarising the insight stored.
         """;
 
   public const string KnowledgeCuratorName = "KnowledgeCurator";

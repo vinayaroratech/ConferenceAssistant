@@ -8,9 +8,9 @@ public class OllamaHealthCheck(IConfiguration configuration, IHttpClientFactory 
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
-        var endpoint   = configuration["Ollama:Endpoint"]      ?? "http://localhost:11434";
-        var chatModel  = configuration["Ollama:ChatModel"]     ?? "llama3.2";
-        var embedModel = configuration["Ollama:EmbeddingModel"] ?? "nomic-embed-text";
+        var endpoint   = configuration["AI:Ollama:Endpoint"]      ?? "http://localhost:11434";
+        var chatModel  = configuration["AI:Ollama:ChatModel"]     ?? "llama3.2";
+        var embedModel = configuration["AI:Ollama:EmbeddingModel"] ?? "nomic-embed-text";
 
         try
         {

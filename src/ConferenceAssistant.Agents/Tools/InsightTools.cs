@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using ConferenceAssistant.Core.Models;
@@ -9,7 +10,10 @@ public static class InsightTools
 {
     public static AIFunction CreateStoreInsightTool(ISessionService sessionService, ILogger? logger = null)
         => AIFunctionFactory.Create(
-            (string pollId, string content, string type) =>
+            (
+                [Description("The exact poll ID string that was analysed")] string pollId,
+                [Description("Plain-text analysis paragraph (2-4 sentences). Quote actual vote counts and percentages. No JSON, no curly braces.")] string content,
+                [Description("Insight category: PollAnalysis, AudienceTrend, KnowledgeGap, or Summary")] string type) =>
             {
                 logger?.LogInformation("[Tool:store_insight] pollId={PollId} type={Type}", pollId, type);
                 var insightType = Enum.TryParse<InsightType>(type, true, out var t) ? t : InsightType.PollAnalysis;

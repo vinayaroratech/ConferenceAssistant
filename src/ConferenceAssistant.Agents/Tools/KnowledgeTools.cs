@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using ConferenceAssistant.Core.Services;
@@ -33,7 +34,9 @@ public static class KnowledgeTools
 
     public static AIFunction CreateSearchKnowledgeTool(ISemanticSearchService searchService, ILogger? logger = null)
         => AIFunctionFactory.Create(
-            async (string query, int topK) =>
+            async (
+                [Description("Natural language query to search the session knowledge base")] string query,
+                [Description("Maximum results to return; use 0 for default of 5")] int topK) =>
             {
                 logger?.LogInformation("[Tool:search_knowledge] query={Query} topK={TopK}", query, topK > 0 ? topK : 5);
                 var results = await searchService.SearchAsync(query, topK > 0 ? topK : 5);
@@ -50,7 +53,9 @@ public static class KnowledgeTools
 
     public static AIFunction CreateIngestContentTool(ContentIngestionPipeline mcpPipeline, ILogger? logger = null)
         => AIFunctionFactory.Create(
-            async (string content, string sourceUrl) =>
+            async (
+                [Description("The raw text content to ingest into the knowledge base")] string content,
+                [Description("Source URL or identifier for this content")] string sourceUrl) =>
             {
                 logger?.LogInformation("[Tool:ingest_content] Ingesting from {SourceUrl} ({Length} chars)", sourceUrl, content.Length);
                 await mcpPipeline.IngestAsync(content, sourceUrl);
@@ -84,7 +89,9 @@ public static class KnowledgeTools
     public static AIFunction CreateIngestPollResponsesTool(
         IPollService pollService, ResponseIngestionPipeline responseIngestion, ILogger? logger = null)
         => AIFunctionFactory.Create(
-            async (string pollId, CancellationToken ct) =>
+            async (
+                [Description("The exact poll ID string to ingest responses for")] string pollId,
+                CancellationToken ct) =>
             {
                 logger?.LogInformation("[Tool:ingest_poll_responses] Ingesting responses for poll {PollId}", pollId);
                 var poll = pollService.GetPoll(pollId);
@@ -103,7 +110,9 @@ public static class KnowledgeTools
 
     public static AIFunction CreateSaveQuestionAnswerTool(ISessionService sessionService, ILogger? logger = null)
         => AIFunctionFactory.Create(
-            (string questionId, string answer) =>
+            (
+                [Description("The exact question ID string from the question being answered")] string questionId,
+                [Description("The AI-generated answer text to save")] string answer) =>
             {
                 logger?.LogInformation("[Tool:save_question_answer] Saving answer for question {QuestionId}", questionId);
                 sessionService.AnswerQuestion(questionId, answer);

@@ -20,12 +20,7 @@ public class ResponseAnalysisWorkflow(
         var agent = agentFactory.CreateResponseAnalyst();
 
         var response = await agent.RunAsync(
-            $"""
-            POLL ID: {pollId}
-
-            Analyse the results for the poll with ID "{pollId}".
-            Pass "{pollId}" as the exact argument to GetPollResults - do not use a placeholder or schema.
-            """,
+            $"Analyse the results for poll ID: {pollId}",
             cancellationToken: ct);
 
         var result = response.Text ?? "";

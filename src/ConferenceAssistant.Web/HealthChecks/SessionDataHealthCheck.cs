@@ -3,7 +3,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace ConferenceAssistant.Web.HealthChecks;
 
-public class SessionDataHealthCheck(SessionService sessionService) : IHealthCheck
+public class SessionDataHealthCheck(ISessionService sessionService) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {

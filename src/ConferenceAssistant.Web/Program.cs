@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Caching.Distributed;
-using OllamaSharp;
 using ConferenceAssistant.Agents.Handlers;
 using ConferenceAssistant.Core.Domain;
 using ConferenceAssistant.Core.Domain.Events;
@@ -12,43 +10,28 @@ using ConferenceAssistant.Agents;
 using ConferenceAssistant.Mcp;
 using ConferenceAssistant.Mcp.Server;
 using ConferenceAssistant.Mcp.Tools;
+using ConferenceAssistant.Core.Extensions;
 using ConferenceAssistant.Web.Components;
+using ConferenceAssistant.Web.Extensions;
 using ConferenceAssistant.Web.HealthChecks;
 using ModelContextProtocol.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Ollama: IChatClient + IEmbeddingGenerator ---
-var ollamaEndpoint = builder.Configuration["Ollama:Endpoint"] ?? "http://localhost:11434";
-var chatModel = builder.Configuration["Ollama:ChatModel"] ?? "llama3.2";
-var embeddingModel = builder.Configuration["Ollama:EmbeddingModel"] ?? "nomic-embed-text";
-
+// ── Logging ────────────────────
 builder.Services.AddLogging(config =>
 {
     config.AddConsole();
     config.SetMinimumLevel(LogLevel.Information);
 });
-builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSingleton(sp =>
-{
-    var pipeline = new ChatClientBuilder(new OllamaApiClient(new Uri(ollamaEndpoint), chatModel))
-        // UseFunctionInvocation() removed: ChatClientAgent handles its own tool invocation loop.
-        // Keeping it here would cause double-invocation when ChatClientAgent calls IChatClient.
-        .UseDistributedCache(sp.GetRequiredService<IDistributedCache>())
-        .UseLogging(sp.GetRequiredService<ILoggerFactory>())
-        .Build(sp);
 
-    sp.GetRequiredService<ILoggerFactory>()
-      .CreateLogger("ConferenceAssistant.Web")
-      .LogInformation("IChatClient pipeline ready. Outermost type: {Type}", pipeline.GetType().Name);
+// ── AI (IChatClient + IEmbeddingGenerator) ────────────────────────────────────
+// Switch between "github" (GitHub Models) and "ollama" (local) via AI:Provider.
+// Store secrets with: dotnet user-secrets set "AI:GitHub:Token" "<your-PAT>"
+var aiProvider = builder.Configuration.GetAiProvider();
+builder.AddAiServices(aiProvider);
 
-    return pipeline;
-});
-
-builder.Services.AddEmbeddingGenerator(
-    (IEmbeddingGenerator<string, Embedding<float>>)new OllamaApiClient(new Uri(ollamaEndpoint), embeddingModel));
-
-// --- Core Services ---
+// ── Core Services ──────────────
 builder.Services.AddSingleton<DomainEventDispatcher>();
 builder.Services.AddSingleton<IPollService, PollService>();
 builder.Services.AddSingleton<ISessionService, SessionService>();
@@ -56,42 +39,41 @@ builder.Services.AddSingleton<IConferenceRegistry, ConferenceRegistry>();
 builder.Services.AddSingleton<IAgentActivityService, AgentActivityService>();
 builder.Services.AddSingleton<ISessionSummaryService, SessionSummaryService>();
 
-// --- Domain event handlers (Core) ---
+// ── Domain Event Handlers (Core) 
 builder.Services.AddSingleton<IDomainEventHandler<TopicActivated>, TopicActivatedHandler>();
-builder.Services.AddSingleton<IDomainEventHandler<InsightStored>, InsightStoredHandler>();
+builder.Services.AddSingleton<IDomainEventHandler<InsightStored>,  InsightStoredHandler>();
 
-// --- Ingestion + VectorData ---
+// ── Ingestion + Vector Data ──────
 builder.Services.AddIngestionServices();
 
-// --- Agents ---
+// ── Agents + Workflows ──────────────
 builder.Services.AddAgentServices();
 
-// --- Domain event handlers (Agents) ---
-builder.Services.AddSingleton<IDomainEventHandler<PollClosed>, PollClosedHandler>();
+// ── Domain Event Handlers (Agents) ────────────────────────────────────────────
+builder.Services.AddSingleton<IDomainEventHandler<PollClosed>,   PollClosedHandler>();
 builder.Services.AddSingleton<IDomainEventHandler<SessionEnded>, SessionEndedHandler>();
 
-// --- MCP services ---
+// ── MCP Server ─────────────────
 builder.Services.AddMcpServices();
-
-// --- Blazor ---
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
-
-// --- MCP Server ---
 builder.Services.AddMcpServer()
     .WithHttpTransport()
     .WithTools<ConferenceTools>()
     .WithTools<KnowledgeTools>();
 
-// --- Health checks ---
-// 'ollama-health': longer timeout - /api/tags is slow when Ollama is listing large models
-// 'health':        short timeout - used by Qdrant and any fast checks
+// ── Blazor ─────────────────────
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+// ── Health Checks ───────────────
 builder.Services.AddHttpClient("ollama-health").ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddHttpClient("health").ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(2));
-builder.Services.AddHealthChecks()
-    .AddCheck<OllamaHealthCheck>("ollama",        tags: ["ready"])
-    .AddCheck<QdrantHealthCheck>("qdrant",        tags: ["ready"])
+
+var healthChecks = builder.Services.AddHealthChecks()
+    .AddCheck<QdrantHealthCheck>("qdrant",            tags: ["ready"])
     .AddCheck<SessionDataHealthCheck>("session-data", tags: ["ready"]);
+
+if (!builder.Configuration.IsGitHubAiProvider())   // Ollama health check only applies when running locally
+    healthChecks.AddCheck<OllamaHealthCheck>("ollama", tags: ["ready"]);
 
 var app = builder.Build();
 
@@ -110,7 +92,7 @@ using (var scope = app.Services.CreateScope())
 
     // Check if the vector store already has data (relevant for persistent stores like Qdrant).
     // A zero-vector search with topK=1 is the lightest way to probe for existing records.
-    var zeroVec = new ReadOnlyMemory<float>(new float[768]);
+    var zeroVec = new ReadOnlyMemory<float>(new float[builder.Configuration.GetAiEmbeddingDimension()]);
     var probe = vectorCollection.SearchAsync(zeroVec, 1);
     var hasExistingData = false;
     await foreach (var _ in probe) { hasExistingData = true; break; }

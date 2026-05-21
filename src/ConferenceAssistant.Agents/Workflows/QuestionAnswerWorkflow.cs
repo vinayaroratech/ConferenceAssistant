@@ -33,7 +33,7 @@ public class QuestionAnswerWorkflow(
             cancellationToken: ct);
 
         var answer = response.Text ?? "No answer generated.";
-        _logger.LogInformation("[QuestionAnswerWorkflow] Answer ready for question {QuestionId}", questionId);
+        _logger.LogInformation("[QuestionAnswerWorkflow] Answer ready for question {QuestionId} \r\n {Answer}", questionId, answer);
         activityService?.Log("KnowledgeCurator", $"Answered: {questionText[..Math.Min(60, questionText.Length)]}…");
         return answer;
     }
